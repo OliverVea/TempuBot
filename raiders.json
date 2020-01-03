@@ -1,49 +1,136 @@
 {
-    "izomi": {},
-    "arcanos": {},
-    "bambiqt": {},
-    "dondarion": {},
-    "elkie": {},
-    "heddwyn": {},
-    "leyhand": {},
-    "matitka": {},
-    "nimble": {},
-    "peanut": {},
-    "pristine": {},
-    "saasen": {},
-    "sancturis": {},
-    "smisken": {},
-    "snoops": {},
-    "tempia": {},
-    "tey": {},
-    "wíz": {},
-    "xygo": {},
-    "gnomagic": {},
-    "isun": {},
-    "jorbuck": {},
-    "schnils": {},
-    "swiftshot": {},
-    "scorpi": {},
-    "tinytomato": {},
-    "drainz": {},
+    "izomi": {
+        "class": "Priest"
+    },
+    "arcanos": {
+        "class": "Mage"
+    },
+    "bambiqt": {
+        "class": "Paladin"
+    },
+    "dondarion": {
+        "class": "Warrior"
+    },
+    "elkie": {
+        "class": "Rogue"
+    },
+    "heddwyn": {
+        "class": "Warrior"
+    },
+    "leyhand": {
+        "class": "Mage"
+    },
+    "matitka": {
+        "class": "Paladin"
+    },
+    "nimble": {
+        "class": "Rogue"
+    },
+    "peanut": {
+        "class": "Rogue"
+    },
+    "pristine": {
+        "class": "Priest"
+    },
+    "saasen": {
+        "class": "Paladin"
+    },
+    "sancturis": {
+        "class": "Warrior"
+    },
+    "smisken": {
+        "class": "Druid"
+    },
+    "snoops": {
+        "class": "Rogue"
+    },
+    "tempia": {
+        "class": "Mage"
+    },
+    "tey": {
+        "class": "Priest"
+    },
+    "wï¿½z": {
+        "class": "Mage"
+    },
+    "xygo": {
+        "class": "Warrior"
+    },
+    "gnomagic": {
+        "class": "Mage"
+    },
+    "isun": {
+        "class": "Druid"
+    },
+    "jorbuck": {
+        "class": "Hunter"
+    },
+    "schnils": {
+        "class": "Warrior"
+    },
+    "swiftshot": {
+        "class": "Hunter"
+    },
+    "scorpi": {
+        "class": "Warlock"
+    },
+    "tinytomato": {
+        "class": "Warrior"
+    },
+    "drainz": {
+        "class": "Warlock"
+    },
     "merven": {
+        "class": "Warrior",
         "role": "tank"
     },
-    "mjp": {},
-    "skitskrajj": {},
-    "triik": {},
-    "visine": {},
+    "mjp": {
+        "class": "Druid"
+    },
+    "skitskrajj": {
+        "class": "Rogue"
+    },
+    "triik": {
+        "class": "Priest"
+    },
+    "visine": {
+        "class": "Druid"
+    },
     "azarthoth": {},
-    "levski": {},
-    "jak": {},
-    "kernowbow": {},
-    "samuél": {},
-    "vesp": {},
-    "yogo": {},
-    "ravenstein": {},
-    "astolfo": {},
-    "qotsa": {},
-    "thuor": {},
-    "pinnacle": {},
-    "maija": {}
+    "levski": {
+        "class": "Mage"
+    },
+    "jak": {
+        "class": "Rogue"
+    },
+    "kernowbow": {
+        "class": "Hunter"
+    },
+    "samuï¿½l": {
+        "class": "Warrior"
+    },
+    "vesp": {
+        "class": "Priest"
+    },
+    "yogo": {
+        "class": "Mage"
+    },
+    "ravenstein": {
+        "class": "Hunter"
+    },
+    "astolfo": {
+        "class": "Paladin"
+    },
+    "qotsa": {
+        "class": "Warlock"
+    },
+    "thuor": {
+        "class": "Hunter"
+    },
+    "pinnacle": {
+        "class": "Warrior"
+    },
+    "maija": {
+        "class": "Warlock"
+    }
 }

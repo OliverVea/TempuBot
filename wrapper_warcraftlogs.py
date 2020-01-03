@@ -11,6 +11,7 @@ def wclAddKey(key):
     global wcl_api_keys
     wcl_api_keys.append(key)
 wclAddKey('2ae1c2a2acd530ab067e93e93d317cd8') # add Tempia's key.
+wclAddKey('26e8d2c94c768185ecaa51000fbfa132') # add Elkie's key.
 
 def getAPIKey():
     global wcl_current_api_key

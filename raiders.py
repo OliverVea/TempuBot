@@ -13,7 +13,7 @@ def newRaider():
 def getRaiderAttribute(name, attribute):
     name = name.lower()
     raiders = getRaiders()
-    if raider not in raiders: return None
+    if name not in raiders: return None
     raider = raiders[name]
     return raider[attribute]
 
