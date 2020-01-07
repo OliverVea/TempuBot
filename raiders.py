@@ -1,8 +1,7 @@
 import json
 import os 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-
-file_path = dir_path + '/raiders.json'
+from defs import dir_path
+raiders_file_path = dir_path + '/raiders.json'
 
 def newRaider():
     raider = {}
@@ -22,24 +21,24 @@ def setRaiderAttribute(name, attribute, value):
     raiders = getRaiders()
     if name not in raiders: return None
     raiders[name][attribute] = value
-    json.dump(raiders, open(file_path, 'w'), ensure_ascii=False, indent=4)
+    json.dump(raiders, open(raiders_file_path, 'w'), ensure_ascii=False, indent=4)
 
 def addRaider(name : str):
     name = name.lower()
-    raiders = json.load(open(file_path))
+    raiders = json.load(open(raiders_file_path))
     if name not in raiders: 
         raiders[name]  = {}
-    json.dump(raiders, open(file_path, 'w'), ensure_ascii=False, indent=4)
+    json.dump(raiders, open(raiders_file_path, 'w'), ensure_ascii=False, indent=4)
 
 def removeRaider(name : str):
     name = name.lower()
-    raiders = json.load(open(file_path))
+    raiders = json.load(open(raiders_file_path))
     if name in raiders: 
         del raiders[name]
-    json.dump(raiders, open(file_path, 'w'), ensure_ascii=False, indent=4)
+    json.dump(raiders, open(raiders_file_path, 'w'), ensure_ascii=False, indent=4)
 
 def getRaiders():
-    raiders = json.load(open(file_path))
+    raiders = json.load(open(raiders_file_path))
     return raiders
 
 def getRaiderNames():
@@ -49,16 +48,16 @@ def getRaiderNames():
 
 def raiderExists(name : str):
     name = name.lower()
-    raiders = json.load(open(file_path))
+    raiders = json.load(open(raiders_file_path))
     return (name in raiders)
 
 def getRaiderAmount():
-    raiders = json.load(open(file_path))
+    raiders = json.load(open(raiders_file_path))
     return len(raiders)
 
 def resetFile():
     emptyObj = {}
-    json.dump(emptyObj, open(file_path, 'w'))
+    json.dump(emptyObj, open(raiders_file_path, 'w'))
 
 
 setRaiderAttribute('merven', 'role', 'tank')

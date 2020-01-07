@@ -15,7 +15,7 @@ import numpy as np
 
 # DEFINITIONS
 debug = []
-discord_token = 'NjU2ODgwNzM1MTM4ODczMzg1.XgoFXA.bLqalIA64kocpyR695GhPNfLDOs'
+discord_token = 'NjU2ODgwNzM1MTM4ODczMzg1.XhNW9A.XoVrKDG0EKwycaAqfHltR0sbF8c'
 channel_id_general = 539007626827005985
 
 # SETUP
@@ -55,32 +55,6 @@ def getDateFromTimestamp(timestamp):
 
 bossEncounterIDs = {663: 'Lucifron', 664: 'Magmadar', 665: 'Gehennas', 666: 'Garr', 667: 'Baron Geddon', 668: 'Shazzrah', 669: 'Sulfuron Harbinger', 670: 'Golemagg',671: 'Majordomo Executus', 672: 'Ragnaros', 1084: 'Onyxia'}
 
-def getRecap(guildName):
-    reports = getReportsGuild(guildName)
-    latest_index = np.argmax([a['start'] for a in reports])
-    latest_report_id = reports[latest_index]['id']
-    latest_report = getReportFightCode(latest_report_id)
-
-    print([key for key in latest_report])
-
-    dateString = getDateFromTimestamp(int(latest_report['start']))
-    participants = [a['name'] for a in latest_report['friendlies']]
-    encounterIDs = [a['boss'] for a in latest_report['fights']]
-    bossIDs = []
-    for encounterID in encounterIDs:
-        if encounterID in bossEncounterIDs: bossIDs.append(encounterID)
-
-    playerResults = {}
-
-    for name in participants:
-        playerParses = getParses(name, queryTimeframe='historic')
-        currentParses = []
-        for parse in playerParses:
-            parseDate = getDateFromTimestamp(parse['startTime'])
-            if (parseDate == dateString):
-                currentParses.append(parse)
-        print(currentParses)
-        return
 
 def getRaids(months = 0):
     if (months == 0): queryStart = 0
@@ -124,7 +98,7 @@ def makeAttendancePlot(participants, figurename):
     for i in y_pos:
         y[i] = y[i] + ' (' + str(round(x[i] * 100, 1)) + '%)'
 
-    fig, ax = plt.subplots(figsize=(20,15))
+    _, ax = plt.subplots(figsize=(20,15))
 
     ax.barh(y_pos, x, color=cols, edgecolor='black', linestyle='-', linewidth=1)
     ax.set_yticks(y_pos)
