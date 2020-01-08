@@ -1,16 +1,16 @@
 {
-    "title": "MC 05/01/20",
+    "start": 1578249132130,
     "bosses": [
-        663,
-        664,
-        665,
-        668,
-        667,
-        669,
-        670,
-        666,
-        671,
-        672,
-        1084
+        "Lucifron",
+        "Magmadar",
+        "Gehennas",
+        "Baron Geddon",
+        "Shazzrah",
+        "Sulfuron Harbinger",
+        "Garr",
+        "Majordomo Executus",
+        "Onyxia",
+        "Ragnaros",
+        "Golemagg the Incinerator"
     ]
 }

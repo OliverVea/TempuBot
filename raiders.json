@@ -1,136 +1,179 @@
 {
     "izomi": {
-        "class": "Priest"
+        "class": "Priest",
+        "role": "Healer"
     },
     "arcanos": {
-        "class": "Mage"
+        "class": "Mage",
+        "role": "Ranged"
     },
     "bambiqt": {
-        "class": "Paladin"
+        "class": "Paladin",
+        "role": "Healer"
     },
     "dondarion": {
-        "class": "Warrior"
+        "class": "Warrior",
+        "role": "Melee"
     },
     "elkie": {
-        "class": "Rogue"
+        "class": "Rogue",
+        "role": "Melee"
     },
     "heddwyn": {
-        "class": "Warrior"
+        "class": "Warrior",
+        "role": "Melee"
     },
     "leyhand": {
-        "class": "Mage"
+        "class": "Mage",
+        "role": "Ranged"
     },
     "matitka": {
-        "class": "Paladin"
+        "class": "Paladin",
+        "role": "Healer"
     },
     "nimble": {
-        "class": "Rogue"
+        "class": "Rogue",
+        "role": "Melee"
     },
     "peanut": {
-        "class": "Rogue"
+        "class": "Rogue",
+        "role": "Melee"
     },
     "pristine": {
-        "class": "Priest"
+        "class": "Priest",
+        "role": "Healer"
     },
     "saasen": {
-        "class": "Paladin"
+        "class": "Paladin",
+        "role": "Healer"
     },
     "sancturis": {
-        "class": "Warrior"
+        "class": "Warrior",
+        "role": "Melee"
     },
     "smisken": {
-        "class": "Druid"
+        "class": "Druid",
+        "role": "Ranged"
     },
     "snoops": {
-        "class": "Rogue"
+        "class": "Rogue",
+        "role": "Melee"
     },
     "tempia": {
-        "class": "Mage"
+        "class": "Mage",
+        "role": "Ranged"
     },
     "tey": {
-        "class": "Priest"
+        "class": "Priest",
+        "role": "Healer"
     },
     "w�z": {
-        "class": "Mage"
+        "class": "Mage",
+        "role": "Ranged"
     },
     "xygo": {
-        "class": "Warrior"
+        "class": "Warrior",
+        "role": "Melee"
     },
     "gnomagic": {
-        "class": "Mage"
+        "class": "Mage",
+        "role": "Ranged"
     },
     "isun": {
-        "class": "Druid"
+        "class": "Druid",
+        "role": "Healer"
     },
     "jorbuck": {
-        "class": "Hunter"
+        "class": "Hunter",
+        "role": "Ranged"
     },
     "schnils": {
-        "class": "Warrior"
+        "class": "Warrior",
+        "role": "Melee"
     },
     "swiftshot": {
-        "class": "Hunter"
+        "class": "Hunter",
+        "role": "Ranged"
     },
     "scorpi": {
-        "class": "Warlock"
+        "class": "Warlock",
+        "role": "Ranged"
     },
     "tinytomato": {
-        "class": "Warrior"
+        "class": "Warrior",
+        "role": "Melee"
     },
     "drainz": {
-        "class": "Warlock"
+        "class": "Warlock",
+        "role": "Ranged"
     },
     "merven": {
         "class": "Warrior",
         "role": "tank"
     },
     "mjp": {
-        "class": "Druid"
+        "class": "Druid",
+        "role": "Healer"
     },
     "skitskrajj": {
-        "class": "Rogue"
+        "class": "Rogue",
+        "role": "Melee"
     },
     "triik": {
-        "class": "Priest"
+        "class": "Priest",
+        "role": "Healer"
     },
     "visine": {
-        "class": "Druid"
+        "class": "Druid",
+        "role": "Melee"
     },
     "azarthoth": {},
     "levski": {
-        "class": "Mage"
+        "class": "Mage",
+        "role": "Ranged"
     },
     "jak": {
-        "class": "Rogue"
+        "class": "Rogue",
+        "role": "Melee"
     },
     "kernowbow": {
-        "class": "Hunter"
+        "class": "Hunter",
+        "role": "Ranged"
     },
     "samu�l": {
-        "class": "Warrior"
+        "class": "Warrior",
+        "role": "Melee"
     },
     "vesp": {
-        "class": "Priest"
+        "class": "Priest",
+        "role": "Healer"
     },
     "yogo": {
-        "class": "Mage"
+        "class": "Mage",
+        "role": "Ranged"
     },
     "ravenstein": {
-        "class": "Hunter"
+        "class": "Hunter",
+        "role": "Ranged"
     },
     "astolfo": {
-        "class": "Paladin"
+        "class": "Paladin",
+        "role": "Healer"
     },
     "qotsa": {
-        "class": "Warlock"
+        "class": "Warlock",
+        "role": "Ranged"
     },
     "thuor": {
-        "class": "Hunter"
+        "class": "Hunter",
+        "role": "Ranged"
     },
     "pinnacle": {
-        "class": "Warrior"
+        "class": "Warrior",
+        "role": "Melee"
     },
     "maija": {
-        "class": "Warlock"
+        "class": "Warlock",
+        "role": "Ranged"
     }
 }

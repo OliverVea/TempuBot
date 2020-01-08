@@ -2,27 +2,42 @@ import discord
 import asyncio
 import datetime
 import time
-
-from discord.ext.tasks import loop
-from discord.ext.commands import Bot
-
-from wrapper_warcraftlogs import getReportsGuild, getReportFightCode, getParses
-
-import raiders
-
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 
+from discord.ext.tasks import loop
+from discord.ext.commands import Bot
+from discord.ext.commands import has_permissions
+
+import ranking_html_factory
+from wrapper_warcraftlogs import getReportsGuild, getReportFightCode, getParses
+import raiders
+from defs import dir_path, colors, getParseColor
+past_file_path = dir_path + r'/past_raid.json'
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys  
+from selenium.webdriver.chrome.options import Options 
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 # DEFINITIONS
-debug = []
-discord_token = 'NjU2ODgwNzM1MTM4ODczMzg1.XhNW9A.XoVrKDG0EKwycaAqfHltR0sbF8c'
+debug = ['wclRaidTask']
+discord_token = 'NjU2ODgwNzM1MTM4ODczMzg1.' + 'XhUbTQ.XfxYEfs-B2L_KLCAL2qn39cl6vM'
 channel_id_general = 539007626827005985
 
 # SETUP
 client = Bot('!')
 
 # FUNCTIONS
-dates = []
+try:
+    dates = json.load(open(dir_path + '/dates.json'))
+except FileNotFoundError:
+    dates = []
+
+
 def addDate(channelid, dayStart, dayEnd, timeStart, timeEnd):
     days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
     dayStart = days.index(dayStart)
@@ -35,9 +50,10 @@ def addDate(channelid, dayStart, dayEnd, timeStart, timeEnd):
     startDate = datetime.datetime(1, 1, dayStart, hourStart, minuteStart, 0, 0)
     endDate = datetime.datetime(1, 1, dayEnd, hourEnd, minuteEnd, 0, 0)
 
-    entry = {'id': channelid, 'start': startDate, 'end': endDate}
+    entry = {'id': channelid, 'start': startDate.strftime('%Y%m%d%H%M%S'), 'end': endDate.strftime('%Y%m%d%H%M%S')}
     if 'addDate' in debug: print ('adddate', entry)
     dates.append(entry)
+    json.dump(dates, open(dir_path + '/dates.json', 'w'))
 
 def isNow(dateStart, dateEnd):
     now = datetime.datetime.now()
@@ -46,7 +62,7 @@ def isNow(dateStart, dateEnd):
     minuteNow = now.minute
     dateNow = datetime.datetime(1, 1, dayNow, hourNow, minuteNow, 0, 0)
     if 'isNow' in debug: print('isNow', dateStart, dateNow, dateEnd)
-    return (dateStart <= dateNow <= dateEnd)
+    return (dateStart <= dateNow.strftime('%Y%m%d%H%M%S') <= dateEnd)
 
 def getDateFromTimestamp(timestamp):
     date = datetime.datetime.utcfromtimestamp(timestamp/1000)
@@ -127,24 +143,207 @@ def getParticipants(raids):
     
     return participants
 
+def get_new_parses(metrics):
+    past_start = ""
+    past_bosses = []
+
+    try:
+        past = json.load(open(past_file_path))
+        past_start = past['start']
+        past_bosses = past['bosses']
+    except FileNotFoundError:
+        past = {}
+
+    new_parses = []
+    report_info = getReportsGuild('Hive Mind')[0]
+    if (report_info['start'] != past_start): 
+        past_bosses = []
+
+    report = getReportFightCode(report_info['id'])
+
+    fights = []
+    for fight in report['fights']:
+        if fight['boss'] is not 0 and fight['kill'] and fight['name'] not in past_bosses:
+            fights.append(fight)
+            past_bosses.append(fight['name'])
+
+    for fight in fights:
+        summary = {'fight': fight, 'parses': {}, 'report': {'title': report_info['title'], 'id': report_info['id']}}
+        for metric in metrics:
+            url_dps = 'https://classic.warcraftlogs.com/reports/' + report_info['id'] + '#fight=' + str(fight['id']) + '&view=rankings&playermetric=' + metric
+
+            chrome_options = Options()
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument("--window-size=1920,1080")
+            chrome_options.add_argument("keep_alive=True")
+            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+
+            print('*' + url_dps)
+            driver = webdriver.Chrome(options=chrome_options)
+            driver.get(url_dps)
+
+            element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "primary")))
+            fight['deaths'] = element.text
+
+            element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "player-table")))
+            row_elements = element.find_elements_by_tag_name('tr')[1:]
+
+
+
+            for row_element in row_elements:
+                row_stats = {}
+                cell_elements = row_element.find_elements_by_tag_name('td')
+                
+                name = cell_elements[4].find_element_by_tag_name('a').get_attribute('innerHTML')
+                role = raiders.getRaiderAttribute(name, 'role')
+
+                if ((metric == 'dps' and role in ['Melee', 'Ranged']) or (metric == 'hps' and role == 'Healer')):
+                    row_stats['percentile'] = int(cell_elements[0].text)
+                    row_stats['rank'] = cell_elements[1].text
+                    row_stats['out_of'] = int(cell_elements[2].text.replace(',', ''))
+                    row_stats['best_rank'] = cell_elements[3].text
+                    row_stats['dps'] = float(cell_elements[5].text)
+                    row_stats['ilvl'] = int(cell_elements[6].text)
+                    row_stats['ipercentile'] = int(cell_elements[7].text)
+
+                    summary['parses'][name] = row_stats    
+        new_parses.append(summary)
+        past = {'start': report_info['start'], 'bosses': past_bosses}
+        json.dump(past, open(past_file_path, 'w'), ensure_ascii=False, indent=4)
+    return new_parses
 
 # LOOPS
-@loop(seconds=5)
+@loop(seconds=20)
 async def wclRaidTask():
     for entry in dates:
-        if 'wclRaidTask' in debug: print('wclRaidTask', entry, entry['start'], entry['end'])
+        if 'wclRaidTask' in debug: print('wclRaidTask', entry['start'], entry['end'], isNow(entry['start'], entry['end']))
 
         if (isNow(entry['start'], entry['end'])):
-            pass
-            #Check warcraftlogs
+            fights = get_new_parses(['dps', 'hps'])
+            for f in fights:
+                fight = f['fight']
+                parses = f['parses']
+                report = f['report']
+
+                melee_parses = []
+                ranged_parses = []
+                healer_parses = []
+
+                for name in parses:
+                    if (raiders.getRaiderAttribute(name, 'role') == 'Ranged'): ranged_parses.append(name)
+                    elif (raiders.getRaiderAttribute(name, 'role') == 'Melee'): melee_parses.append(name)
+                    elif (raiders.getRaiderAttribute(name, 'role') == 'Healer'): healer_parses.append(name)
+
+                group_names = ['Melee', 'Ranged', 'Healers']
+                metric = ['DPS', 'DPS', 'HPS']
+
+                tables = ""
+                for i, current_parses in enumerate([melee_parses, ranged_parses, healer_parses]):
+                    rows = ""
+                    for j, name in enumerate(current_parses[:3]):
+                        parse = parses[name]
+                        percentile = parse['percentile']
+                        class_color = colors[raiders.getRaiderAttribute(name, 'class')]
+                        rows += ranking_html_factory.get_row(
+                            number=str(j + 1), 
+                            name=name,
+                            name_color=class_color,
+                            parse=str(percentile), 
+                            parse_color=getParseColor(percentile), 
+                            rank=parse['rank'],
+                            dps=str(parse['dps']), 
+                        )
+                    
+                    avg_parse = 0
+                    avg_rank = 0
+                    avg_dps = 0
+
+                    n = len(current_parses)
+
+                    for name in current_parses:
+                        avg_parse += parses[name]['percentile'] / n
+                        avg_rank += int(parses[name]['rank'].replace('~','')) / n
+                        avg_dps += parses[name]['dps'] / n
+                        
+                    avg_parse = round(avg_parse, 1)
+                    avg_rank = int(avg_rank)
+                    avg_dps = round(avg_dps, 1)
+
+                    tables += ranking_html_factory.get_table(
+                        group_name=group_names[i], 
+                        metric=metric[i],
+                        rows=rows, 
+                        avg_parse=str(avg_parse), 
+                        avg_parse_color=getParseColor(avg_parse),
+                        avg_rank=str(avg_rank),
+                        avg_dps=str(avg_dps)
+                    )
+
+                html = ranking_html_factory.get_html(fight['name'], tables)
+                link = 'https://classic.warcraftlogs.com/reports/' + str(report['id']) + '#fight=' + str(fight['id'])
+
+                html_path = dir_path + '/boss_summaries/' + fight['name'] + '.html'
+                image_path = dir_path + '/boss_summaries/' + fight['name'] + '.png'
+                with open(html_path, 'w') as file:
+                    file.write(html)
+
+                chrome_options = Options()
+                chrome_options.add_argument('--headless')
+                chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+                chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+
+                driver = webdriver.Chrome(options=chrome_options)
+                driver.get(html_path)
+
+                body = driver.find_element_by_tag_name('body')
+                size = body.size
+                driver.set_window_size(size['width'], size['height'])
+
+                driver.save_screenshot(image_path)
+
+                print(fight)
+
+                pre_message = "__**" + fight['name'] + "**__" + '\n'
+                pre_message += 'Participants: ' + str(len(parses)) + '\n'
+                pre_message += 'Time: ' + str(round((fight['end_time'] - fight['start_time'])/1000, 1)) + 's' + '\n'
+                pre_message += 'Deaths: ' + fight['deaths'] + '\n'
+                post_message = "Log link: " + link 
+
+                channel = client.get_channel(664444157410017280)
+
+                await channel.send(content=pre_message, file=discord.File(image_path))
+                await channel.send(post_message)
 
 # COMMANDS
-@client.command(name = 'inspect')
-async def wcl_inspect(ctx, *args):
-    print('inspect', args)
-    await ctx.send(args)
+@client.command(name = 'forget', help='Removes a specific boss from the list of cleared bosses this week. Example: \'!forget Rag\'')
+@has_permissions(administrator=True)
+async def forget_boss(ctx, *args):
+    if len(args) == 0:
+        await ctx.send('Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
+    else:
+        boss_name = ' '.join(args)
+        bosses = [bossEncounterIDs[key] for key in bossEncounterIDs]
+
+        match = ''
+        for boss in bosses:
+            if boss_name in boss:
+                match = boss
+
+        if match == '':
+            await ctx.send('Input \'' + boss_name + '\' not understood. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
+        else:
+            try:
+                past = json.load(open(past_file_path))
+                if match in past['bosses']:
+                    past['bosses'].remove(match)
+                json.dump(past, open(past_file_path, 'w'), ensure_ascii=False, indent=4)
+            except FileNotFoundError:
+                pass
+
 
 @client.command(name = 'addraid', help = 'Adds raid to the schedule. Example: \'!addraid sunday 19.30 sunday 22.00\'')
+@has_permissions(administrator=True)
 async def wcl_addraid(ctx, *args):
     print('addraid', len(args), args)
 
@@ -154,23 +353,8 @@ async def wcl_addraid(ctx, *args):
     else:
         await ctx.send('Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
 
-colors = {
-    'Death Knight': '#C41F3B', 
-    'Demon Hunter': '#A330C9', 
-    'Druid': '#FF7D0A', 
-    'Hunter': '#A9D271', 
-    'Mage': '#40C7EB', 
-    'Monk': '#00FF96', 
-    'Paladin': '#F58CBA', 
-    'Priest': '#FFFFFF',
-    'Rogue': '#FFF569', 
-    'Shaman': '#0070DE', 
-    'Warlock': '#8787ED', 
-    'Warrior': '#C79C6E',
-    'Discord': '#36393f'
-    }
-
 @client.command(name = 'attendance', help = 'Creates a graph displaying raid attendance. Optionally includes amount of months to go back. Example: \'!attendance 3\'')
+@has_permissions(administrator=True)
 async def wcl_attendance(ctx, *args):
     # Argument handling
     inspect = False
@@ -222,8 +406,9 @@ async def wcl_attendance(ctx, *args):
 @client.event
 async def on_ready():
     print('on_ready')
-    wclRaidTask.start()
 
 # 
 client.run(discord_token)
+wclRaidTask.start()
 
+print('done')
