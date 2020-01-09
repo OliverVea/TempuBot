@@ -1,4 +1,5 @@
 from os.path import dirname, realpath
+from datetime import datetime
 
 dir_path = dirname(realpath(__file__))
 
@@ -26,3 +27,6 @@ def getParseColor(parse):
     elif (parse >= 50): return '#0070dd'
     elif (parse >= 25): return '#1eff00'
     return '#9d9d9d'
+
+def timestamp():
+    return '[' + datetime.now().strftime('%H:%M:%S') + ']'

@@ -3,6 +3,8 @@ import urllib.request
 import numpy as np
 from datetime import datetime
 
+from defs import timestamp
+
 keep_in_memory = True # Uses extra memory but less bandwidth.
 
 wcl_api_keys = [] # Tempia's API Key: 2ae1c2a2acd530ab067e93e93d317cd8
@@ -24,7 +26,7 @@ def makeStringIfIsNot(value, test, prefix):
 
 # Used to read pages with JSON formatted data.
 def queryPage(url):
-    print(url)
+    print(timestamp(), url)
     fp = urllib.request.urlopen(url)
     mybytes = fp.read()
 

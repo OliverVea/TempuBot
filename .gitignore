@@ -1,3 +1,4 @@
 *.txt
 /boss_summaries/
 /__pycache__/
+/.vscode/

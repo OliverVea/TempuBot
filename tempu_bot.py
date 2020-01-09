@@ -13,7 +13,7 @@ from discord.ext.commands import has_permissions
 import ranking_html_factory
 from wrapper_warcraftlogs import getReportsGuild, getReportFightCode, getParses
 import raiders
-from defs import dir_path, colors, getParseColor
+from defs import dir_path, colors, getParseColor, timestamp
 past_file_path = dir_path + r'/past_raid.json'
 
 from selenium import webdriver
@@ -25,8 +25,9 @@ from selenium.webdriver.support import expected_conditions as EC
 
 # DEFINITIONS
 debug = ['wclRaidTask']
-discord_token = 'NjU2ODgwNzM1MTM4ODczMzg1.' + 'XhUbTQ.XfxYEfs-B2L_KLCAL2qn39cl6vM'
-channel_id_general = 539007626827005985
+
+with open(dir_path + '/discord_token.txt') as f:
+    discord_token = f.readline()
 
 # SETUP
 client = Bot('!')
@@ -37,34 +38,35 @@ try:
 except FileNotFoundError:
     dates = []
 
+print(timestamp(), 'dir_path: ' + dir_path)
 
 def addDate(channelid, dayStart, dayEnd, timeStart, timeEnd):
     days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-    dayStart = days.index(dayStart)
-    dayEnd = days.index(dayEnd)
+    dayStart = days.index(dayStart) + 1
+    dayEnd = days.index(dayEnd) + 1
     if (dayEnd < dayStart): dayEnd += 7
 
     hourStart, minuteStart = map(int, timeStart.split('.'))
     hourEnd, minuteEnd = map(int, timeEnd.split('.'))
 
-    startDate = datetime.datetime(1, 1, dayStart, hourStart, minuteStart, 0, 0)
-    endDate = datetime.datetime(1, 1, dayEnd, hourEnd, minuteEnd, 0, 0)
+    startDate = datetime.datetime(year=1, month=1, day=dayStart, hour=hourStart, minute=minuteStart)
+    endDate = datetime.datetime(year=1, month=1, day=dayEnd, hour=hourEnd, minute=minuteEnd)
 
-    entry = {'id': channelid, 'start': startDate.strftime('%Y%m%d%H%M%S'), 'end': endDate.strftime('%Y%m%d%H%M%S')}
-    if 'addDate' in debug: print ('adddate', entry)
+    entry = {'id': channelid, 'start': startDate.strftime('%d-%H:%M:%S'), 'end': endDate.strftime('%d-%H:%M:%S')}
+    if 'addDate' in debug: print (timestamp(), 'adddate', entry)
     dates.append(entry)
     json.dump(dates, open(dir_path + '/dates.json', 'w'))
 
 def isNow(dateStart, dateEnd):
     now = datetime.datetime.now()
-    dayNow = now.weekday()
+    dayNow = now.weekday() + 1
     hourNow = now.hour
     minuteNow = now.minute
-    dateNow = datetime.datetime(1, 1, dayNow, hourNow, minuteNow, 0, 0)
-    if 'isNow' in debug: print('isNow', dateStart, dateNow, dateEnd)
-    return (dateStart <= dateNow.strftime('%Y%m%d%H%M%S') <= dateEnd)
+    dateNow = datetime.datetime(year=1, month=1, day=dayNow, hour=hourNow, minute=minuteNow).strftime('%d-%H:%M:%S')
+    if 'isNow' in debug: print(timestamp(), 'isNow', dateStart, dateNow, dateEnd)
+    return (dateStart <= dateNow <= dateEnd)
 
-def getDateFromTimestamp(timestamp):
+def getDateFromtimestamp(timestamp):
     date = datetime.datetime.utcfromtimestamp(timestamp/1000)
     dateString = date.strftime('%d/%m/%Y')
     return dateString
@@ -179,7 +181,7 @@ def get_new_parses(metrics):
             chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
             chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
 
-            print('*' + url_dps)
+            print(timestamp(), '*' + url_dps)
             driver = webdriver.Chrome(options=chrome_options)
             driver.get(url_dps)
 
@@ -188,8 +190,6 @@ def get_new_parses(metrics):
 
             element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "player-table")))
             row_elements = element.find_elements_by_tag_name('tr')[1:]
-
-
 
             for row_element in row_elements:
                 row_stats = {}
@@ -217,7 +217,7 @@ def get_new_parses(metrics):
 @loop(seconds=20)
 async def wclRaidTask():
     for entry in dates:
-        if 'wclRaidTask' in debug: print('wclRaidTask', entry['start'], entry['end'], isNow(entry['start'], entry['end']))
+        if 'wclRaidTask' in debug: print(timestamp(), 'wclRaidTask', entry['id'], entry['start'], entry['end'], isNow(entry['start'], entry['end']))
 
         if (isNow(entry['start'], entry['end'])):
             fights = get_new_parses(['dps', 'hps'])
@@ -290,8 +290,8 @@ async def wclRaidTask():
 
                 chrome_options = Options()
                 chrome_options.add_argument('--headless')
-                chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-                chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+                #chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+                #chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
 
                 driver = webdriver.Chrome(options=chrome_options)
                 driver.get(html_path)
@@ -302,20 +302,25 @@ async def wclRaidTask():
 
                 driver.save_screenshot(image_path)
 
-                print(fight)
-
                 pre_message = "__**" + fight['name'] + "**__" + '\n'
                 pre_message += 'Participants: ' + str(len(parses)) + '\n'
                 pre_message += 'Time: ' + str(round((fight['end_time'] - fight['start_time'])/1000, 1)) + 's' + '\n'
                 pre_message += 'Deaths: ' + fight['deaths'] + '\n'
                 post_message = "Log link: " + link 
 
-                channel = client.get_channel(664444157410017280)
+                channel = client.get_channel(entry['id'])
 
                 await channel.send(content=pre_message, file=discord.File(image_path))
                 await channel.send(post_message)
 
 # COMMANDS
+@client.command(name = 'echo')
+@has_permissions(administrator=True)
+async def echo(ctx, *args):
+    await ctx.message.delete()
+    if (len(args) > 0): await ctx.send(' '.join(args))
+    else: await ctx.send('echo')
+
 @client.command(name = 'forget', help='Removes a specific boss from the list of cleared bosses this week. Example: \'!forget Rag\'')
 @has_permissions(administrator=True)
 async def forget_boss(ctx, *args):
@@ -345,7 +350,7 @@ async def forget_boss(ctx, *args):
 @client.command(name = 'addraid', help = 'Adds raid to the schedule. Example: \'!addraid sunday 19.30 sunday 22.00\'')
 @has_permissions(administrator=True)
 async def wcl_addraid(ctx, *args):
-    print('addraid', len(args), args)
+    print(timestamp(), 'addraid', len(args), args)
 
     if len(args) == 4:
         id = ctx.message.channel.id
@@ -384,8 +389,8 @@ async def wcl_attendance(ctx, *args):
             message =  'Attendance for ' + inspectTarget + ': \n'
             message += 'Total attendance: ' + str(round(target['attendance'] / target['earliestAttendance'] * 100, 1)) + '%.\n'
 
-            allRaids = [getDateFromTimestamp(raid['start']) for raid in raids]
-            attendedRaids = [getDateFromTimestamp(raid) for raid in target['raids']]
+            allRaids = [getDateFromtimestamp(raid['start']) for raid in raids]
+            attendedRaids = [getDateFromtimestamp(raid) for raid in target['raids']]
             message += 'Raids attended: '
             message += ', '.join(attendedRaids) + '. \n'
             
@@ -405,10 +410,8 @@ async def wcl_attendance(ctx, *args):
 # HANDLERS
 @client.event
 async def on_ready():
-    print('on_ready')
+    wclRaidTask.start()
+    print(timestamp(), 'on_ready')
 
 # 
 client.run(discord_token)
-wclRaidTask.start()
-
-print('done')
