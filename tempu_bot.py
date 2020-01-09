@@ -318,7 +318,7 @@ async def wcl_attendance(ctx, *args):
             
             missed_raids = [getDateFromtimestamp(raid) for raid in target['missed_raids']]
             message += 'Raids missed: '
-            if (len(missed_raids) == 0): message += 'None. :bambi:'
+            if (len(missed_raids) == 0): message += 'None.'
             message += ', '.join(missed_raids) + '\n'
         
         await ctx.send(content=message)
@@ -339,5 +339,5 @@ async def on_ready():
         print(timestamp(), 'reconnected')
 
 # 
-print('starting discord bot with token:', discord_token)
+print(timestamp(), 'starting discord bot with token:', discord_token)
 client.run(discord_token.strip())
