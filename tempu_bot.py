@@ -176,10 +176,10 @@ def get_new_parses(metrics):
 
             chrome_options = Options()
             chrome_options.add_argument('--headless')
-            chrome_options.add_argument("--window-size=1920,1080")
+            #chrome_options.add_argument("--window-size=1920,1080")
             chrome_options.add_argument("keep_alive=True")
             chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-            chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+            #chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
 
             print(timestamp(), '*' + url_dps)
             driver = webdriver.Chrome(options=chrome_options)
