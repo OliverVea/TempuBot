@@ -294,7 +294,7 @@ async def wclRaidTask():
                 #chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
 
                 driver = webdriver.Chrome(options=chrome_options)
-                driver.get(html_path)
+                driver.get('file:///' + html_path)
 
                 body = driver.find_element_by_tag_name('body')
                 size = body.size
