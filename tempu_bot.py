@@ -408,8 +408,11 @@ async def wcl_attendance(ctx, *args):
 # HANDLERS
 @client.event
 async def on_ready():
-    wclRaidTask.start()
-    print(timestamp(), 'on_ready')
+    try:
+        wclRaidTask.start()
+        print(timestamp(), 'started wcl task')
+    except RuntimeError:
+        print(timestamp(), 'reconnected')
 
 # 
 print('starting discord bot with token:', discord_token)
