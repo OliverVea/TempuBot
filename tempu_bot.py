@@ -14,6 +14,7 @@ from wrapper_warcraftlogs import getReportsGuild, getReportFightCode, getParses
 import raiders
 from defs import dir_path, colors, getParseColor, timestamp
 past_file_path = dir_path + r'/past_raid.json'
+import attendance
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys  
@@ -71,78 +72,6 @@ def getDateFromtimestamp(timestamp):
     return dateString
 
 bossEncounterIDs = {663: 'Lucifron', 664: 'Magmadar', 665: 'Gehennas', 666: 'Garr', 667: 'Baron Geddon', 668: 'Shazzrah', 669: 'Sulfuron Harbinger', 670: 'Golemagg',671: 'Majordomo Executus', 672: 'Ragnaros', 1084: 'Onyxia'}
-
-
-def getRaids(months = 0):
-    if (months == 0): queryStart = 0
-    else: queryStart = int(time.time() * 1000 - float(months) * 31 * 24 * 60 * 60 * 1000)
-
-    raids = getReportsGuild('Hive Mind', queryStart=queryStart)
-
-    return raids
-
-def filterRaids(raids): 
-    # Indentifying duplicate raids
-    toIgnore = []
-    for iA, raidA in enumerate(raids):
-        if raidA['title'][0] is '_': toIgnore.append(iA)
-        else:
-            for iB, raidB in enumerate(raids):
-                if iA is not iB:
-                    if raidB['start'] <= raidA['start'] <= raidB['end']:
-                        toIgnore.append(iA)
-                        break
-    
-    removed = 0
-    for i in toIgnore:
-        del raids[i - removed]
-        removed += 1
-
-    return raids
-
-def makeAttendancePlot(participants, figurename):
-    attendance = [[p, (participants[p]['attendance'] / participants[p]['earliestAttendance']), participants[p]['attendance'], participants[p]['earliestAttendance']] for p in participants]
-    attendance = np.asarray(attendance)
-    attendance = attendance[attendance[:,1].argsort()][::-1]
-
-    x = np.ndarray.astype(attendance[:,1], float)
-    y = attendance[:,0]
-
-    cols = [colors[raiders.getRaiderAttribute(name, 'class')] for name in y]
-    
-    y_pos = np.arange(len(y))
-
-    for i in y_pos:
-        y[i] = y[i] + ' (' + str(round(x[i] * 100, 1)) + '%)'
-
-    _, ax = plt.subplots(figsize=(20,15))
-
-    ax.barh(y_pos, x, color=cols, edgecolor='black', linestyle='-', linewidth=1)
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(y)
-    ax.invert_yaxis()  # labels read top-to-bottom
-    ax.set_xlabel('Attendance', color='white')
-
-    plt.savefig(raiders.dir_path + '/' + figurename)
-
-
-def getParticipants(raids):
-    participants = {}
-    for i, raid in enumerate(raids):
-        report = getReportFightCode(raid['id'])
-
-        for friendly in report['friendlies']:
-            name = friendly['name']
-            if raiders.raiderExists(name):
-                if name in participants:
-                    participants[name]['earliestAttendance'] = i + 1
-                    participants[name]['attendance'] += 1
-                    participants[name]['raids'].append(raid['start'])
-                else:
-                    raiders.setRaiderAttribute(name, 'class', friendly['type'])
-                    participants[name] = {'attendance': 1, 'earliestAttendance': i + 1, 'raids': [raid['start']]}
-    
-    return participants
 
 def get_new_parses(metrics):
     past_start = ""
@@ -373,35 +302,31 @@ async def wcl_attendance(ctx, *args):
         return
     
     # Get raids from wcl
-    raids = getRaids(queryStart)
-    raids = filterRaids(raids)
-    participants = getParticipants(raids)
 
     if inspect:
-        target = participants[inspectTarget]
+        target = attendance.get_participant(inspectTarget)
 
-        if target['earliestAttendance'] is 0:
+        if len(target['raids']) is 0:
             message = 'No attended raids registered.'
         else:
             message =  'Attendance for ' + inspectTarget + ': \n'
-            message += 'Total attendance: ' + str(round(target['attendance'] / target['earliestAttendance'] * 100, 1)) + '%.\n'
+            message += 'Total attendance: ' + str(round(target['attendance'] * 100, 1)) + '%.\n'
 
-            allRaids = [getDateFromtimestamp(raid['start']) for raid in raids]
-            attendedRaids = [getDateFromtimestamp(raid) for raid in target['raids']]
+            attended_raids = [getDateFromtimestamp(raid) for raid in target['raids']]
             message += 'Raids attended: '
-            message += ', '.join(attendedRaids) + '\n'
+            message += ', '.join(attended_raids) + '\n'
             
-            missedRaids = []
-            for raid in allRaids[:target['earliestAttendance']]: 
-                if raid not in attendedRaids: missedRaids.append(raid)
+            missed_raids = [getDateFromtimestamp(raid) for raid in target['missed_raids']]
             message += 'Raids missed: '
-            message += ', '.join(missedRaids) + '\n'
+            if (len(missed_raids) == 0): message += 'None. :bambi:'
+            message += ', '.join(missed_raids) + '\n'
         
         await ctx.send(content=message)
 
     else:
-        makeAttendancePlot(participants, 'tempimage.png')
-        await ctx.send(content="Attendance plot: ", file=discord.File(raiders.dir_path + '/tempimage.png'))
+        participants = attendance.get_participants()
+        attendance.make_attendance_plot(participants, 'attendance_plot.png')
+        await ctx.send(content="Attendance plot: ", file=discord.File(raiders.dir_path + '/attendance_plot.png'))
 
 
 # HANDLERS

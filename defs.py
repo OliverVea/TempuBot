@@ -1,6 +1,8 @@
 from os.path import dirname, realpath
 from datetime import datetime
 
+import json
+
 dir_path = dirname(realpath(__file__))
 
 colors = {
@@ -30,3 +32,13 @@ def getParseColor(parse):
 
 def timestamp():
     return '[' + datetime.now().strftime('%H:%M:%S') + ']'
+
+def load_json_file(filename, on_error = {}):
+    try:
+        with open(filename) as f:
+            content = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(timestamp(), 'tried to load file:', filename, 'raised error', e)
+        content = on_error
+    
+    return content
