@@ -1,0 +1,3 @@
+*.txt
+/boss_summaries/
+/__pycache__/
