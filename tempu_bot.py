@@ -7,8 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from discord.ext.tasks import loop
-from discord.ext.commands import Bot
-from discord.ext.commands import has_permissions
+from discord.ext.commands import Bot, has_permissions, has_any_role
 
 import ranking_html_factory
 from wrapper_warcraftlogs import getReportsGuild, getReportFightCode, getParses
@@ -313,14 +312,14 @@ async def wclRaidTask():
 
 # COMMANDS
 @client.command(name = 'echo')
-@has_permissions(administrator=True)
+@has_any_role('Officer', 'Admin')
 async def echo(ctx, *args):
     await ctx.message.delete()
     if (len(args) > 0): await ctx.send(content=' '.join(args))
     else: await ctx.send(content='echo')
 
 @client.command(name = 'forget', help='Removes a specific boss from the list of cleared bosses this week. Example: \'!forget Rag\'')
-@has_permissions(administrator=True)
+@has_any_role('Officer', 'Admin')
 async def forget_boss(ctx, *args):
     if len(args) == 0:
         await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
@@ -346,7 +345,7 @@ async def forget_boss(ctx, *args):
 
 
 @client.command(name = 'addraid', help = 'Adds raid to the schedule. Example: \'!addraid sunday 19.30 sunday 22.00\'')
-@has_permissions(administrator=True)
+@has_any_role('Officer', 'Admin')
 async def wcl_addraid(ctx, *args):
     print(timestamp(), 'addraid', len(args), args)
 
@@ -357,7 +356,7 @@ async def wcl_addraid(ctx, *args):
         await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
 
 @client.command(name = 'attendance', help = 'Creates a graph displaying raid attendance. Optionally includes amount of months to go back. Example: \'!attendance 3\'')
-@has_permissions(administrator=True)
+@has_any_role('Officer', 'Admin')
 async def wcl_attendance(ctx, *args):
     # Argument handling
     inspect = False
