@@ -414,4 +414,5 @@ async def on_ready():
     print(timestamp(), 'on_ready')
 
 # 
+print('starting discord bot with token:', discord_token)
 client.run(discord_token)
