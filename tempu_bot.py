@@ -290,17 +290,23 @@ async def wclRaidTask():
 
                 chrome_options = Options()
                 chrome_options.add_argument('--headless')
-                #chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-                #chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+
+                print('294')
 
                 driver = webdriver.Chrome(options=chrome_options)
                 driver.get('file:///' + html_path)
+
+                print('299')
 
                 body = driver.find_element_by_tag_name('body')
                 size = body.size
                 driver.set_window_size(size['width'], size['height'])
 
+                print('305')
+
                 driver.save_screenshot(image_path)
+
+                print('309')
 
                 pre_message = "__**" + fight['name'] + "**__" + '\n'
                 pre_message += 'Participants: ' + str(len(parses)) + '\n'
@@ -308,10 +314,19 @@ async def wclRaidTask():
                 pre_message += 'Deaths: ' + fight['deaths'] + '\n'
                 post_message = "Log link: " + link 
 
+                print('317')
+
                 channel = client.get_channel(entry['id'])
 
+                print('321')
+
                 await channel.send(content=pre_message, file=discord.File(image_path))
+
+                print('325')
+
                 await channel.send(post_message)
+                
+                print('329')
 
 # COMMANDS
 @client.command(name = 'echo')
