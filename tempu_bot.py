@@ -389,13 +389,13 @@ async def wcl_attendance(ctx, *args):
             allRaids = [getDateFromtimestamp(raid['start']) for raid in raids]
             attendedRaids = [getDateFromtimestamp(raid) for raid in target['raids']]
             message += 'Raids attended: '
-            message += ', '.join(attendedRaids) + '. \n'
+            message += ', '.join(attendedRaids) + '\n'
             
             missedRaids = []
-            for raid in allRaids: 
+            for raid in allRaids[:target['earliestAttendance']]: 
                 if raid not in attendedRaids: missedRaids.append(raid)
             message += 'Raids missed: '
-            message += ', '.join(missedRaids) + '. \n'
+            message += ', '.join(missedRaids) + '\n'
         
         await ctx.send(content=message)
 
