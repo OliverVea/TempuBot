@@ -291,22 +291,14 @@ async def wclRaidTask():
                 chrome_options = Options()
                 chrome_options.add_argument('--headless')
 
-                print('294')
-
                 driver = webdriver.Chrome(options=chrome_options)
                 driver.get('file:///' + html_path)
-
-                print('299')
 
                 body = driver.find_element_by_tag_name('body')
                 size = body.size
                 driver.set_window_size(size['width'], size['height'])
 
-                print('305')
-
                 driver.save_screenshot(image_path)
-
-                print('309')
 
                 pre_message = "__**" + fight['name'] + "**__" + '\n'
                 pre_message += 'Participants: ' + str(len(parses)) + '\n'
@@ -314,33 +306,24 @@ async def wclRaidTask():
                 pre_message += 'Deaths: ' + fight['deaths'] + '\n'
                 post_message = "Log link: " + link 
 
-                print('317')
-
                 channel = client.get_channel(entry['id'])
 
-                print('321')
-
                 await channel.send(content=pre_message, file=discord.File(image_path))
-
-                print('325')
-
-                await channel.send(post_message)
-                
-                print('329')
+                await channel.send(content=post_message)
 
 # COMMANDS
 @client.command(name = 'echo')
 @has_permissions(administrator=True)
 async def echo(ctx, *args):
     await ctx.message.delete()
-    if (len(args) > 0): await ctx.send(' '.join(args))
-    else: await ctx.send('echo')
+    if (len(args) > 0): await ctx.send(content=' '.join(args))
+    else: await ctx.send(content='echo')
 
 @client.command(name = 'forget', help='Removes a specific boss from the list of cleared bosses this week. Example: \'!forget Rag\'')
 @has_permissions(administrator=True)
 async def forget_boss(ctx, *args):
     if len(args) == 0:
-        await ctx.send('Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
+        await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
     else:
         boss_name = ' '.join(args)
         bosses = [bossEncounterIDs[key] for key in bossEncounterIDs]
@@ -351,7 +334,7 @@ async def forget_boss(ctx, *args):
                 match = boss
 
         if match == '':
-            await ctx.send('Input \'' + boss_name + '\' not understood. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
+            await ctx.send(content='Input \'' + boss_name + '\' not understood. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
         else:
             try:
                 past = json.load(open(past_file_path))
@@ -371,7 +354,7 @@ async def wcl_addraid(ctx, *args):
         id = ctx.message.channel.id
         addDate(id, args[0], args[2], args[1], args[3])
     else:
-        await ctx.send('Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
+        await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
 
 @client.command(name = 'attendance', help = 'Creates a graph displaying raid attendance. Optionally includes amount of months to go back. Example: \'!attendance 3\'')
 @has_permissions(administrator=True)
@@ -387,7 +370,7 @@ async def wcl_attendance(ctx, *args):
         inspectTarget = args[1][0].upper() + args[1][1:].lower()
         inspect = True
     else: 
-        await ctx.send('Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
+        await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
         return
     
     # Get raids from wcl
@@ -415,11 +398,11 @@ async def wcl_attendance(ctx, *args):
             message += 'Raids missed: '
             message += ', '.join(missedRaids) + '. \n'
         
-        await ctx.send(message)
+        await ctx.send(content=message)
 
     else:
         makeAttendancePlot(participants, 'tempimage.png')
-        await ctx.send(file=discord.File(raiders.dir_path + '/tempimage.png'))
+        await ctx.send(content="Attendance plot: ", file=discord.File(raiders.dir_path + '/tempimage.png'))
 
 
 # HANDLERS
