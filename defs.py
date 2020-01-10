@@ -5,6 +5,8 @@ import json
 
 dir_path = dirname(realpath(__file__))
 
+encoding = 'utf-16-le'
+
 colors = {
     'Death Knight': '#C41F3B', 
     'Demon Hunter': '#A330C9', 
@@ -35,7 +37,7 @@ def timestamp():
 
 def load_json_file(filename, on_error = {}):
     try:
-        with open(filename) as f:
+        with open(filename, encoding=encoding) as f:
             content = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError) as e:
         print(timestamp(), 'tried to load file:', filename, 'raised error', e)

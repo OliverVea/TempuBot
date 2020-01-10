@@ -12,11 +12,30 @@ client = gspread.authorize(creds)
 
 # Find a workbook by name and open the first sheet
 # Make sure you use the right name here.
-sheet = client.open("Hive Mind Officer docs").sheet1
+sheet = client.open("Hive Mind Officer docs").get_worksheet(3)
+sheet = sheet.get_all_values()
+client.close()
 
+header_row = [cell.strip().lower() for cell in sheet[2]]
 
-content = {}
+col_name = header_row.index('name')
+col_class = header_row.index('class')
+col_role = header_row.index('role')
+col_rank = header_row.index('rank')
 
+names = [row[col_name].lower() for row in sheet[3:] if row[col_name] != '']
+classes = [row[col_class].lower() for row in sheet[3:] if row[col_name] != '']
+roles = [row[col_role].lower() for row in sheet[3:] if row[col_name] != '']
+ranks = [row[col_rank].lower() for row in sheet[3:] if row[col_name] != '']
+
+raiders = {}
+
+for i, name in enumerate(names):
+    raiders[name] = {'class': classes[i], 'role': roles[i], 'rank': ranks[i]}
+
+print(raiders)
+
+"""
 bosses = ['Lucifron', 'Magmadar', 'Gehennas', 'Garr', 'Baron Geddon', 'Shazzrah', 'Golemagg', 'Sulfuron Harbinger', 'Majordomo', 'Ragnaros', 'Onyxia']
 
 sheet = sheet.get_all_values()
@@ -44,3 +63,4 @@ for row in range(0, len(sheet) - 1):
         content[date] = loot
 
 json.dump(content, open(defs.dir_path + '/loot.json', 'w'), ensure_ascii=False, indent=4)
+"""

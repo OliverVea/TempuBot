@@ -58,6 +58,3 @@ def getRaiderAmount():
 def resetFile():
     emptyObj = {}
     json.dump(emptyObj, open(raiders_file_path, 'w'))
-
-
-setRaiderAttribute('merven', 'role', 'tank')

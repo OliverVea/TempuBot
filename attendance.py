@@ -4,8 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from defs import dir_path, timestamp, load_json_file, colors
+import defs
 from wrapper_warcraftlogs import getReportsGuild, getReportFightCode
 from raiders import raiderExists, getRaiderAttribute
+
+earliest_next_update = 30 * 60 #Minutes
+last_update = 0
 
 def get_query_start(days, months):
     query_start = 0
@@ -39,12 +43,15 @@ def filter_raids(raids):
     return raids
 
 def get_attendance(guild='Hive Mind', update_attendance = True, days = None, months = None):
+    global last_update, earliest_next_update
     attendance = load_json_file(dir_path + '/attendance.json')
 
     if guild not in attendance:
         attendance[guild] = {}
+        last_update = 0
 
-    if update_attendance:
+    if update_attendance and last_update + earliest_next_update < time():
+        last_update = time()
         raids = get_raids(guild, days, months)
         raids = filter_raids(raids)
         for raid in raids:
@@ -57,7 +64,7 @@ def get_attendance(guild='Hive Mind', update_attendance = True, days = None, mon
                 raid_entry = {'start': raid['start'], 'title': raid['title'], 'participants': participants}
 
                 attendance[guild][raid['id']] = raid_entry
-        json.dump(attendance, open(dir_path + '/attendance.json', 'w'), ensure_ascii=False, indent=4)
+            json.dump(attendance, open(dir_path + '/attendance.json', 'w', encoding=defs.encoding), ensure_ascii=False, indent=4)
 
     ids = [raid_id for raid_id in attendance[guild]]
     for raid_id in ids:
@@ -108,14 +115,18 @@ def get_participant(name, guild = 'Hive Mind', update_attendance=True, days = No
         if name in raid['participants']: 
             participant['raids'].append(raid['start'])
     
-    participant['first_raid'] = min(participant['raids'])
+    if (len(participant['raids']) > 0):
+        participant['first_raid'] = min(participant['raids'])
 
-    for raid_id in attendance:
-        raid = attendance[raid_id]
-        if not name in raid['participants'] and raid['start'] > participant['first_raid']: 
-            participant['missed_raids'].append(raid['start'])
-    
-    participant['attendance'] = len(participant['raids']) / (len(participant['raids']) + len(participant['missed_raids']))
+        for raid_id in attendance:
+            raid = attendance[raid_id]
+            if not name in raid['participants'] and raid['start'] > participant['first_raid']: 
+                participant['missed_raids'].append(raid['start'])
+        
+        participant['attendance'] = len(participant['raids']) / (len(participant['raids']) + len(participant['missed_raids']))
+    else: 
+        participant['first_raid'] = time() * 1000
+        participant['attendance'] = 0
 
     return participant
 
@@ -149,6 +160,3 @@ def make_attendance_plot(participants, figurename):
     ax.set_xlabel('Attendance', color='white')
 
     plt.savefig(dir_path + '/' + figurename)
-
-participants = get_participants()
-make_attendance_plot(participants, 'temp_plot.png')

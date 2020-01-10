@@ -1,7 +1,9 @@
 import json
 import urllib.request
-import numpy as np
 from datetime import datetime
+
+import numpy as np
+import requests
 
 from defs import timestamp
 
@@ -29,11 +31,17 @@ def queryPage(url):
     print(timestamp(), url)
     fp = urllib.request.urlopen(url)
     mybytes = fp.read()
-
-    mystr = mybytes.decode("utf8")
     fp.close()
 
+    mystr = mybytes.decode('unicode-escape')
+
     return json.loads(mystr)
+
+def _queryPage(url):
+    print(timestamp(), url)
+    r = requests.get(url)
+
+    return r.json()
 
 wclZones = False
 # Gets an array of Zone objects. Each zone corresponds to a raid/dungeon instance in the game and has its own set of encounters.
@@ -138,4 +146,3 @@ def getReportTables(queryView, queryCode, queryStart = 0, queryEnd = -1, queryBy
 
     url = 'https://classic.warcraftlogs.com:443/v1/report/tables/{}/{}?start={}{}&by={}{}{}{}{}{}{}{}{}{}{}{}&api_key='.format(queryView, queryCode, queryStart, queryEnd, queryBy, querySourceID, querySourceInstance, querySourceClass, queryTargetID, queryTargetInstance, queryTargetClass, queryAbilityID, queryOptions, queryCutoff, queryEncounter, queryWipes) + getAPIKey()
     return queryPage(url)
- 

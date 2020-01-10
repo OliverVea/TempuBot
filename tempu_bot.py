@@ -14,6 +14,7 @@ import ranking_html_factory
 from wrapper_warcraftlogs import getReportsGuild, getReportFightCode, getParses
 import raiders
 from defs import dir_path, colors, getParseColor, timestamp
+import defs
 past_file_path = dir_path + r'/past_raid.json'
 import attendance
 
@@ -35,7 +36,7 @@ client = Bot('!')
 
 # FUNCTIONS
 try:
-    dates = json.load(open(dir_path + '/dates.json'))
+    dates = json.load(open(dir_path + '/dates.json', encoding=defs.encoding))
 except FileNotFoundError:
     dates = []
 
@@ -56,7 +57,7 @@ def addDate(channelid, dayStart, dayEnd, timeStart, timeEnd):
     entry = {'id': channelid, 'start': startDate.strftime('%d-%H:%M:%S'), 'end': endDate.strftime('%d-%H:%M:%S')}
     if 'addDate' in debug: print (timestamp(), 'adddate', entry)
     dates.append(entry)
-    json.dump(dates, open(dir_path + '/dates.json', 'w'))
+    json.dump(dates, open(dir_path + '/dates.json', 'w', encoding=defs.encoding))
 
 def isNow(dateStart, dateEnd):
     now = datetime.datetime.now()
@@ -83,15 +84,14 @@ bossEncounterIDs = {
     670: 'Golemagg the Incinerator',
     671: 'Majordomo Executus', 
     672: 'Ragnaros', 
-    1084: 'Onyxia'
-    }
+    1084: 'Onyxia'}
 
 def get_new_parses(metrics):
     past_start = ""
     past_bosses = []
 
     try:
-        past = json.load(open(past_file_path))
+        past = json.load(open(past_file_path, encoding=defs.encoding))
         past_start = past['start']
         past_bosses = past['bosses']
     except FileNotFoundError:
@@ -117,10 +117,8 @@ def get_new_parses(metrics):
 
             chrome_options = Options()
             chrome_options.add_argument('--headless')
-            #chrome_options.add_argument("--window-size=1920,1080")
             chrome_options.add_argument("keep_alive=True")
             chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-            #chrome_options.binary_location = r'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
 
             print(timestamp(), '*' + url_dps)
             driver = webdriver.Chrome(options=chrome_options)
@@ -151,7 +149,7 @@ def get_new_parses(metrics):
                     summary['parses'][name] = row_stats    
         new_parses.append(summary)
         past = {'start': report_info['start'], 'bosses': past_bosses}
-        json.dump(past, open(past_file_path, 'w'), ensure_ascii=False, indent=4)
+        json.dump(past, open(past_file_path, 'w', encoding=defs.encoding), ensure_ascii=False, indent=4)
     return new_parses
 
 # LOOPS
@@ -231,6 +229,7 @@ async def wclRaidTask():
 
                 chrome_options = Options()
                 chrome_options.add_argument('--headless')
+                chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
                 driver = webdriver.Chrome(options=chrome_options)
                 driver.get('file:///' + html_path)
@@ -256,13 +255,18 @@ async def wclRaidTask():
 @client.command(name = 'echo')
 @has_any_role('Officer', 'Admin')
 async def echo(ctx, *args):
+    print(timestamp(), 'echo', args)
     await ctx.message.delete()
-    if (len(args) > 0): await ctx.send(content=' '.join(args))
+    if (len(args) > 0): 
+        with open(dir_path + '/echo.log', 'w+', encoding=defs.encoding) as file:
+            file.write(' '.join(args) + '\n')
+        await ctx.send(content=' '.join(args))
     else: await ctx.send(content='echo')
 
 @client.command(name = 'forget', help='Removes a specific boss from the list of cleared bosses this week. Example: \'!forget Rag\'')
 @has_any_role('Officer', 'Admin')
 async def forget_boss(ctx, *args):
+    print(timestamp(), 'forget', args)
     if len(args) == 0:
         await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
     else:
@@ -278,10 +282,10 @@ async def forget_boss(ctx, *args):
             await ctx.send(content='Input \'' + boss_name + '\' not understood. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
         else:
             try:
-                past = json.load(open(past_file_path))
+                past = json.load(open(past_file_path, encoding=defs.encoding))
                 if match in past['bosses']:
                     past['bosses'].remove(match)
-                json.dump(past, open(past_file_path, 'w'), ensure_ascii=False, indent=4)
+                json.dump(past, open(past_file_path, 'w', encoding=defs.encoding), ensure_ascii=False, indent=4)
                 await ctx.send(content='Deleted boss ' + match + ' from memory.')
             except FileNotFoundError:
                 pass
@@ -301,36 +305,87 @@ async def wcl_addraid(ctx, *args):
 @client.command(name = 'attendance', help = 'Creates a graph displaying raid attendance. Optionally includes amount of months to go back. Example: \'!attendance 3\'')
 @has_any_role('Officer', 'Admin')
 async def wcl_attendance(ctx, *args):
+    print(timestamp(), 'attendance', args)
     days = None
     months = None
     # Argument handling
+
     if (len(args) > 0 and args[0] == 'inspect'):
-        name = args[1][:1].upper() + args[1][1:].lower()
+        names = []
+        message = "Attendance summary:\n"
 
-        days = None
-        months = None
+        i = 1
+        while (i < len(args) and not args[i].isdigit()):
+            names.append( args[i][:1].upper() + args[i][1:].lower())
+            i += 1
 
-        if (len(args) > 2):
-            if (len(args) == 3 or args[3] in ['month', 'months']): months=int(args[2])
-            elif (args[3] in ['day', 'days']): days=int(args[2])
-        
-        target = attendance.get_participant(name, days=days, months=months)
+        for name in names:
 
-        if len(target['raids']) is 0:
-            message = 'No attended raids registered for ' + name + '.'
-        else:
-            message =  'Attendance for ' + name + ': \n'
-            message += 'Total attendance: ' + str(round(target['attendance'] * 100, 1)) + '%.\n'
+            days = None
+            months = None
 
-            attended_raids = [getDateFromtimestamp(raid) for raid in target['raids']]
-            message += 'Raids attended (' + str(len(target['raids'])) + '): '
-            message += ', '.join(attended_raids) + '\n'
+            if (len(args) >= i + 1):
+                if (len(args) == i + 1 or args[i + 1] in ['month', 'months']): months=int(args[i])
+                elif (args[i + 1] in ['day', 'days']): days=int(args[i])
             
-            missed_raids = [getDateFromtimestamp(raid) for raid in target['missed_raids']]
-            message += 'Raids missed ('  + str(len(target['missed_raids'])) + '): '
-            if (len(missed_raids) == 0): message += 'None.'
-            message += ', '.join(missed_raids) + '\n'
-        
+            target = attendance.get_participant(name, days=days, months=months)
+
+            if len(target['raids']) is 0:
+                message += 'No attended raids registered for ' + name + '.\n\n'
+            else:
+                message +=  'Attendance for ' + name + ': \n'
+                message += 'Total attendance: ' + str(round(target['attendance'] * 100, 1)) + '%.\n'
+
+                attended_raids = [getDateFromtimestamp(raid) for raid in target['raids']]
+                message += 'Raids attended (' + str(len(target['raids'])) + '): '
+                message += ', '.join(attended_raids) + '\n'
+                #message += 'Raids attended: '  + str(len(target['raids'])) + '\n'
+                
+                missed_raids = [getDateFromtimestamp(raid) for raid in target['missed_raids']]
+                message += 'Raids attended (' + str(len(target['missed_raids'])) + '): '
+                message += ', '.join(missed_raids) + '\n'
+                #message += 'Raids missed: '  + str(len(target['missed_raids'])) + '\n\n'
+            
+            if name != names[-1]:
+                message += '\n'
+
+        await ctx.send(content=message)
+
+    elif (len(args) > 0 and args[0] == 'inspectc'):
+        guild_raiders = raiders.getRaiders()
+
+        message = ""
+        i = 1
+
+        names = {}
+        while (i < len(args) and not args[i].isdigit()):
+            names[args[i]] = []
+            for name in guild_raiders:
+                if (guild_raiders[name]['class'].lower() == args[i].lower()): 
+                    names[args[i]].append(name[:1].upper() + name[1:].lower())
+
+            i += 1
+
+        for class_name in names:
+            message += '__**{}:**__\n'.format(class_name[:1].upper() + class_name[1:].lower())
+            for name in names[class_name]:
+                days = None
+                months = None
+
+                if (len(args) >= i + 1):
+                    if (len(args) == i + 1 or args[i + 1] in ['month', 'months']): months=int(args[i])
+                    elif (args[i + 1] in ['day', 'days']): days=int(args[i])
+                
+                target = attendance.get_participant(name, days=days, months=months)
+
+                if len(target['raids']) is 0:
+                    message += 'No attended raids registered for ' + name + '.\n'
+                else:
+                    raider_attendance = str(round(target['attendance'] * 100))
+                    attended_raids = str(len(target['raids']))
+                    missed_raids = str(len(target['missed_raids']))
+                    message += '{} - attendance: {}%, attended raids: {}, missed raids: {}.\n'.format(name, raider_attendance, attended_raids, missed_raids)
+
         await ctx.send(content=message)
     else:
         if (len(args) > 0):
