@@ -294,7 +294,7 @@ async def forget_boss(ctx, *args):
                 if match in past['bosses']:
                     past['bosses'].remove(match)
                 json.dump(past, open(past_file_path, 'w', encoding=defs.encoding), ensure_ascii=False, indent=4)
-                await ctx.send(content='Deleted boss ' + match + ' from memory.')
+                await ctx.send(content='Deleted boss ' + match + ' from bot memory.')
             except FileNotFoundError:
                 pass
 
@@ -307,6 +307,30 @@ async def wcl_addraid(ctx, *args):
     if len(args) == 4:
         id = ctx.message.channel.id
         addDate(id, args[0], args[2], args[1], args[3])
+    else:
+        await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
+
+@client.command(name = 'removeraid', help="Removes a raid from the schedule. You select raid by index in \'!listraids\'. Example: \'!removeraid 1\'")
+@has_any_role('Officer', 'Admin')
+async def wcl_remove_raid(ctx, *args):
+    print(timestamp(), 'addraid', len(args), args)
+
+    if len(args) == 1:
+        i = int(args[0])
+        del dates[i]
+    else:
+        await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
+
+@client.command(name = 'listraids', help='Lists the raids on the schedule. Example: \'!listraids\'')
+@has_any_role('Officer', 'Admin')
+async def wcl_list_raids(ctx, *args):
+    print(timestamp(), 'addraid', len(args), args)
+
+    if len(args) == 0:
+        message = "**Raid Times:**\n"
+        for i, entry in enumerate(dates):
+            message += '{} - id: {}, start: {}, end: {}\n'.format(i, entry['id'], entry['start'], entry['end'])
+        await ctx.send(content=message)
     else:
         await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
 
@@ -415,7 +439,7 @@ async def wcl_attendance(ctx, *args):
                     attended_raids = str(len(target['raids']))
                     missed_raids = str(len(target['missed_raids']))
                     message += '**{}** - attendance: **{}%**, attended raids: **{}**, missed raids: **{}**.\n'.format(name, raider_attendance, attended_raids, missed_raids)
-
+            message += '\n'
         await ctx.send(content=message)
     else:
         if (len(args) > 0):
@@ -435,5 +459,5 @@ async def on_ready():
         print(timestamp(), 'reconnected')
 
 # 
-print(timestamp(), 'starting discord bot with token:', discord_token)
+print(timestamp(), 'starting discord bot with token:', discord_token.strip())
 client.run(discord_token.strip())

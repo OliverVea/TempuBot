@@ -21,10 +21,10 @@ def update_raiders():
     col_role = header_row.index('role')
     col_rank = header_row.index('rank')
 
-    names = [row[col_name].lower() for row in sheet[3:] if row[col_name] != '']
-    classes = [row[col_class].lower() for row in sheet[3:] if row[col_name] != '']
-    roles = [row[col_role].lower() for row in sheet[3:] if row[col_name] != '']
-    ranks = [row[col_rank].lower() for row in sheet[3:] if row[col_name] != '']
+    names = [row[col_name].strip().lower() for row in sheet[3:] if row[col_name] != '']
+    classes = [row[col_class].strip().lower() for row in sheet[3:] if row[col_name] != '']
+    roles = [row[col_role].strip().lower() for row in sheet[3:] if row[col_name] != '']
+    ranks = [row[col_rank].strip().lower() for row in sheet[3:] if row[col_name] != '']
 
     raiders = {}
 
