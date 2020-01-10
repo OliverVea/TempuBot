@@ -275,6 +275,7 @@ async def echo(ctx, *args):
 @has_any_role('Officer', 'Admin')
 async def forget_boss(ctx, *args):
     print(timestamp(), 'forget', args)
+    await ctx.message.delete()
     if len(args) == 0:
         await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
     else:
@@ -303,6 +304,7 @@ async def forget_boss(ctx, *args):
 @has_any_role('Officer', 'Admin')
 async def wcl_addraid(ctx, *args):
     print(timestamp(), 'addraid', len(args), args)
+    await ctx.message.delete()
 
     if len(args) == 4:
         id = ctx.message.channel.id
@@ -314,6 +316,7 @@ async def wcl_addraid(ctx, *args):
 @has_any_role('Officer', 'Admin')
 async def wcl_remove_raid(ctx, *args):
     print(timestamp(), 'addraid', len(args), args)
+    await ctx.message.delete()
 
     if len(args) == 1:
         i = int(args[0])
@@ -325,6 +328,7 @@ async def wcl_remove_raid(ctx, *args):
 @has_any_role('Officer', 'Admin')
 async def wcl_list_raids(ctx, *args):
     print(timestamp(), 'addraid', len(args), args)
+    await ctx.message.delete()
 
     if len(args) == 0:
         message = "**Raid Times:**\n"
@@ -338,6 +342,7 @@ async def wcl_list_raids(ctx, *args):
 @has_any_role('Officer', 'Admin')
 async def wcl_attendance(ctx, *args):
     print(timestamp(), 'attendance', args)
+    await ctx.message.delete()
     days = None
     months = None
     # Argument handling
