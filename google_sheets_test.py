@@ -10,30 +10,29 @@ scope = ['https://spreadsheets.google.com/feeds',
 creds = ServiceAccountCredentials.from_json_keyfile_name(defs.dir_path + '/client_secret.json', scope)
 client = gspread.authorize(creds)
 
-# Find a workbook by name and open the first sheet
-# Make sure you use the right name here.
-sheet = client.open("Hive Mind Officer docs").get_worksheet(3)
-sheet = sheet.get_all_values()
-client.close()
+def update_raiders():
+    sheet = client.open("Hive Mind Officer docs").get_worksheet(3)
+    sheet = sheet.get_all_values()
 
-header_row = [cell.strip().lower() for cell in sheet[2]]
+    header_row = [cell.strip().lower() for cell in sheet[2]]
 
-col_name = header_row.index('name')
-col_class = header_row.index('class')
-col_role = header_row.index('role')
-col_rank = header_row.index('rank')
+    col_name = header_row.index('name')
+    col_class = header_row.index('class')
+    col_role = header_row.index('role')
+    col_rank = header_row.index('rank')
 
-names = [row[col_name].lower() for row in sheet[3:] if row[col_name] != '']
-classes = [row[col_class].lower() for row in sheet[3:] if row[col_name] != '']
-roles = [row[col_role].lower() for row in sheet[3:] if row[col_name] != '']
-ranks = [row[col_rank].lower() for row in sheet[3:] if row[col_name] != '']
+    names = [row[col_name].lower() for row in sheet[3:] if row[col_name] != '']
+    classes = [row[col_class].lower() for row in sheet[3:] if row[col_name] != '']
+    roles = [row[col_role].lower() for row in sheet[3:] if row[col_name] != '']
+    ranks = [row[col_rank].lower() for row in sheet[3:] if row[col_name] != '']
 
-raiders = {}
+    raiders = {}
 
-for i, name in enumerate(names):
-    raiders[name] = {'class': classes[i], 'role': roles[i], 'rank': ranks[i]}
+    for i, name in enumerate(names):
+        raiders[name] = {'class': classes[i], 'role': roles[i], 'rank': ranks[i]}
 
-print(raiders)
+    with open(defs.dir_path + '/raiders.json', 'w', encoding=defs.encoding) as file:
+        json.dump(raiders, file, ensure_ascii=False, indent=4)
 
 """
 bosses = ['Lucifron', 'Magmadar', 'Gehennas', 'Garr', 'Baron Geddon', 'Shazzrah', 'Golemagg', 'Sulfuron Harbinger', 'Majordomo', 'Ragnaros', 'Onyxia']

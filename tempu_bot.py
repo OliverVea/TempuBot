@@ -17,6 +17,7 @@ from defs import dir_path, colors, getParseColor, timestamp
 import defs
 past_file_path = dir_path + r'/past_raid.json'
 import attendance
+import google_sheets_test
 
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys  
@@ -26,7 +27,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 # DEFINITIONS
-debug = ['wclRaidTask']
+debug = []
 
 with open(dir_path + '/discord_token.txt') as f:
     discord_token = f.readline()
@@ -91,9 +92,10 @@ def get_new_parses(metrics):
     past_bosses = []
 
     try:
-        past = json.load(open(past_file_path, encoding=defs.encoding))
-        past_start = past['start']
-        past_bosses = past['bosses']
+        with open(past_file_path, encoding=defs.encoding) as file:
+            past = json.load(file)
+            past_start = past['start']
+            past_bosses = past['bosses']
     except FileNotFoundError:
         past = {}
 
@@ -108,7 +110,6 @@ def get_new_parses(metrics):
     for fight in report['fights']:
         if fight['boss'] is not 0 and fight['kill'] and fight['name'] not in past_bosses:
             fights.append(fight)
-            past_bosses.append(fight['name'])
 
     for fight in fights:
         summary = {'fight': fight, 'parses': {}, 'report': {'title': report_info['title'], 'id': report_info['id']}}
@@ -134,10 +135,10 @@ def get_new_parses(metrics):
                 row_stats = {}
                 cell_elements = row_element.find_elements_by_tag_name('td')
                 
-                name = cell_elements[4].find_element_by_tag_name('a').get_attribute('innerHTML')
+                name = cell_elements[4].find_element_by_tag_name('a').get_attribute('innerHTML').lower()
                 role = raiders.getRaiderAttribute(name, 'role')
 
-                if ((metric == 'dps' and role in ['Melee', 'Ranged']) or (metric == 'hps' and role == 'Healer')):
+                if ((metric == 'dps' and role in ['melee', 'ranged']) or (metric == 'hps' and role == 'healer')):
                     row_stats['percentile'] = int(cell_elements[0].text)
                     row_stats['rank'] = cell_elements[1].text
                     row_stats['out_of'] = int(cell_elements[2].text.replace(',', ''))
@@ -146,13 +147,20 @@ def get_new_parses(metrics):
                     row_stats['ilvl'] = int(cell_elements[6].text)
                     row_stats['ipercentile'] = int(cell_elements[7].text)
 
-                    summary['parses'][name] = row_stats    
+                    summary['parses'][name] = row_stats
         new_parses.append(summary)
+        past_bosses.append(fight['name'])
         past = {'start': report_info['start'], 'bosses': past_bosses}
         json.dump(past, open(past_file_path, 'w', encoding=defs.encoding), ensure_ascii=False, indent=4)
     return new_parses
 
 # LOOPS
+@loop(hours=1)
+async def update_raiders_task():
+    print(timestamp(), 'update_raiders_task started')
+    google_sheets_test.update_raiders()
+    print(timestamp(), 'update_raiders_task finished')
+
 @loop(seconds=20)
 async def wclRaidTask():
     for entry in dates:
@@ -170,9 +178,9 @@ async def wclRaidTask():
                 healer_parses = []
 
                 for name in parses:
-                    if (raiders.getRaiderAttribute(name, 'role') == 'Ranged'): ranged_parses.append(name)
-                    elif (raiders.getRaiderAttribute(name, 'role') == 'Melee'): melee_parses.append(name)
-                    elif (raiders.getRaiderAttribute(name, 'role') == 'Healer'): healer_parses.append(name)
+                    if (raiders.getRaiderAttribute(name, 'role') == 'ranged'): ranged_parses.append(name)
+                    elif (raiders.getRaiderAttribute(name, 'role') == 'melee'): melee_parses.append(name)
+                    elif (raiders.getRaiderAttribute(name, 'role') == 'healer'): healer_parses.append(name)
 
                 group_names = ['Melee', 'Ranged', 'Healers']
                 metric = ['DPS', 'DPS', 'HPS']
@@ -311,6 +319,18 @@ async def wcl_attendance(ctx, *args):
     # Argument handling
 
     if (len(args) > 0 and args[0] == 'inspect'):
+        verbose = False
+        if ('-v' in args):
+            verbose = True
+            args = list(args)
+            del args[args.index('-v')]
+            
+        brief = False
+        if ('-b' in args):
+            brief = True
+            args = list(args)
+            del args[args.index('-b')]
+
         names = []
         message = "Attendance summary:\n"
 
@@ -331,27 +351,37 @@ async def wcl_attendance(ctx, *args):
             target = attendance.get_participant(name, days=days, months=months)
 
             if len(target['raids']) is 0:
-                message += 'No attended raids registered for ' + name + '.\n\n'
+                message += 'No attended raids registered for **' + name + '**.\n\n'
             else:
-                message +=  'Attendance for ' + name + ': \n'
-                message += 'Total attendance: ' + str(round(target['attendance'] * 100, 1)) + '%.\n'
+                if brief:
+                    raider_attendance = str(round(target['attendance'] * 100))
+                    attended_raids = str(len(target['raids']))
+                    missed_raids = str(len(target['missed_raids']))
+                    message += '**{}** - attendance: **{}%**, attended raids: **{}**, missed raids: **{}**.'.format(name, raider_attendance, attended_raids, missed_raids)
+                else:
+                    message +=  'Attendance for __**' + name + '**__: \n'
+                    message += 'Total attendance: **' + str(round(target['attendance'] * 100, 1)) + '%**.\n'
 
-                attended_raids = [getDateFromtimestamp(raid) for raid in target['raids']]
-                message += 'Raids attended (' + str(len(target['raids'])) + '): '
-                message += ', '.join(attended_raids) + '\n'
-                #message += 'Raids attended: '  + str(len(target['raids'])) + '\n'
-                
-                missed_raids = [getDateFromtimestamp(raid) for raid in target['missed_raids']]
-                message += 'Raids attended (' + str(len(target['missed_raids'])) + '): '
-                message += ', '.join(missed_raids) + '\n'
-                #message += 'Raids missed: '  + str(len(target['missed_raids'])) + '\n\n'
+                    attended_raids = [getDateFromtimestamp(raid) for raid in target['raids']]
+                    if verbose:
+                        message += 'Raids attended (**' + str(len(target['raids'])) + '**): '
+                        message += ', '.join(attended_raids) + '\n'
+                    else:
+                        message += 'Raids attended: **'  + str(len(target['raids'])) + '**\n'
+                    
+                    missed_raids = [getDateFromtimestamp(raid) for raid in target['missed_raids']]
+                    if verbose:
+                        message += 'Raids attended (**' + str(len(target['missed_raids'])) + '**): '
+                        message += ', '.join(missed_raids) + '\n'
+                    else:
+                        message += 'Raids missed: **'  + str(len(target['missed_raids'])) + '**\n'
             
             if name != names[-1]:
                 message += '\n'
 
         await ctx.send(content=message)
 
-    elif (len(args) > 0 and args[0] == 'inspectc'):
+    elif (len(args) > 0 and args[0] == 'class'):
         guild_raiders = raiders.getRaiders()
 
         message = ""
@@ -384,7 +414,7 @@ async def wcl_attendance(ctx, *args):
                     raider_attendance = str(round(target['attendance'] * 100))
                     attended_raids = str(len(target['raids']))
                     missed_raids = str(len(target['missed_raids']))
-                    message += '{} - attendance: {}%, attended raids: {}, missed raids: {}.\n'.format(name, raider_attendance, attended_raids, missed_raids)
+                    message += '**{}** - attendance: **{}%**, attended raids: **{}**, missed raids: **{}**.\n'.format(name, raider_attendance, attended_raids, missed_raids)
 
         await ctx.send(content=message)
     else:
@@ -399,7 +429,8 @@ async def wcl_attendance(ctx, *args):
 async def on_ready():
     try:
         wclRaidTask.start()
-        print(timestamp(), 'started wcl task')
+        update_raiders_task.start()
+        print(timestamp(), 'started tasks')
     except RuntimeError:
         print(timestamp(), 'reconnected')
 

@@ -8,19 +8,19 @@ dir_path = dirname(realpath(__file__))
 encoding = 'utf-16-le'
 
 colors = {
-    'Death Knight': '#C41F3B', 
-    'Demon Hunter': '#A330C9', 
-    'Druid': '#FF7D0A', 
-    'Hunter': '#A9D271', 
-    'Mage': '#40C7EB', 
-    'Monk': '#00FF96', 
-    'Paladin': '#F58CBA', 
-    'Priest': '#FFFFFF',
-    'Rogue': '#FFF569', 
-    'Shaman': '#0070DE', 
-    'Warlock': '#8787ED', 
-    'Warrior': '#C79C6E',
-    'Discord': '#36393f'
+    'death knight': '#C41F3B', 
+    'demon hunter': '#A330C9', 
+    'druid': '#FF7D0A', 
+    'hunter': '#A9D271', 
+    'mage': '#40C7EB', 
+    'monk': '#00FF96', 
+    'paladin': '#F58CBA', 
+    'priest': '#FFFFFF',
+    'rogue': '#FFF569', 
+    'shaman': '#0070DE', 
+    'warlock': '#8787ED', 
+    'warrior': '#C79C6E',
+    'discord': '#36393f'
     }
 
 def getParseColor(parse):

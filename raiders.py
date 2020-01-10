@@ -1,6 +1,6 @@
 import json
 import os 
-from defs import dir_path
+from defs import dir_path, encoding
 raiders_file_path = dir_path + '/raiders.json'
 
 def newRaider():
@@ -21,24 +21,24 @@ def setRaiderAttribute(name, attribute, value):
     raiders = getRaiders()
     if name not in raiders: return None
     raiders[name][attribute] = value
-    json.dump(raiders, open(raiders_file_path, 'w'), ensure_ascii=False, indent=4)
+    json.dump(raiders, open(raiders_file_path, 'w', encoding=encoding), ensure_ascii=False, indent=4)
 
 def addRaider(name : str):
     name = name.lower()
-    raiders = json.load(open(raiders_file_path))
+    raiders = json.load(open(raiders_file_path, encoding=encoding))
     if name not in raiders: 
         raiders[name]  = {}
-    json.dump(raiders, open(raiders_file_path, 'w'), ensure_ascii=False, indent=4)
+    json.dump(raiders, open(raiders_file_path, 'w', encoding=encoding), ensure_ascii=False, indent=4)
 
 def removeRaider(name : str):
     name = name.lower()
-    raiders = json.load(open(raiders_file_path))
+    raiders = json.load(open(raiders_file_path, encoding=encoding))
     if name in raiders: 
         del raiders[name]
-    json.dump(raiders, open(raiders_file_path, 'w'), ensure_ascii=False, indent=4)
+    json.dump(raiders, open(raiders_file_path, 'w', encoding=encoding), ensure_ascii=False, indent=4)
 
 def getRaiders():
-    raiders = json.load(open(raiders_file_path))
+    raiders = json.load(open(raiders_file_path, encoding=encoding))
     return raiders
 
 def getRaiderNames():
@@ -48,13 +48,13 @@ def getRaiderNames():
 
 def raiderExists(name : str):
     name = name.lower()
-    raiders = json.load(open(raiders_file_path))
+    raiders = json.load(open(raiders_file_path, encoding=encoding))
     return (name in raiders)
 
 def getRaiderAmount():
-    raiders = json.load(open(raiders_file_path))
+    raiders = json.load(open(raiders_file_path, encoding=encoding))
     return len(raiders)
 
 def resetFile():
     emptyObj = {}
-    json.dump(emptyObj, open(raiders_file_path, 'w'))
+    json.dump(emptyObj, open(raiders_file_path, 'w', encoding=encoding))
