@@ -5,6 +5,7 @@ import time
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import re
 
 from discord.ext.tasks import loop
 from discord.ext.commands import Bot, has_permissions, has_any_role
@@ -71,7 +72,19 @@ def getDateFromtimestamp(timestamp):
     dateString = date.strftime('%d/%m/%Y')
     return dateString
 
-bossEncounterIDs = {663: 'Lucifron', 664: 'Magmadar', 665: 'Gehennas', 666: 'Garr', 667: 'Baron Geddon', 668: 'Shazzrah', 669: 'Sulfuron Harbinger', 670: 'Golemagg',671: 'Majordomo Executus', 672: 'Ragnaros', 1084: 'Onyxia'}
+bossEncounterIDs = {
+    663: 'Lucifron', 
+    664: 'Magmadar', 
+    665: 'Gehennas', 
+    666: 'Garr', 
+    667: 'Baron Geddon', 
+    668: 'Shazzrah', 
+    669: 'Sulfuron Harbinger', 
+    670: 'Golemagg the Incinerator',
+    671: 'Majordomo Executus', 
+    672: 'Ragnaros', 
+    1084: 'Onyxia'
+    }
 
 def get_new_parses(metrics):
     past_start = ""
@@ -258,7 +271,7 @@ async def forget_boss(ctx, *args):
 
         match = ''
         for boss in bosses:
-            if boss_name in boss:
+            if boss_name.lower() in boss.lower():
                 match = boss
 
         if match == '':
@@ -269,6 +282,7 @@ async def forget_boss(ctx, *args):
                 if match in past['bosses']:
                     past['bosses'].remove(match)
                 json.dump(past, open(past_file_path, 'w'), ensure_ascii=False, indent=4)
+                await ctx.send(content='Deleted boss ' + match + ' from memory.')
             except FileNotFoundError:
                 pass
 
@@ -287,48 +301,44 @@ async def wcl_addraid(ctx, *args):
 @client.command(name = 'attendance', help = 'Creates a graph displaying raid attendance. Optionally includes amount of months to go back. Example: \'!attendance 3\'')
 @has_any_role('Officer', 'Admin')
 async def wcl_attendance(ctx, *args):
+    days = None
+    months = None
     # Argument handling
-    inspect = False
-    if (len(args) == 0): 
-        queryStart = 0
-    elif (len(args) == 1): 
-        queryStart = int(args[0])
-    elif (len(args) == 2 and args[0] == 'inspect' and raiders.raiderExists(args[1])):
-        queryStart = 0
-        inspectTarget = args[1][0].upper() + args[1][1:].lower()
-        inspect = True
-    else: 
-        await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
-        return
-    
-    # Get raids from wcl
+    if (len(args) > 0 and args[0] == 'inspect'):
+        name = args[1][:1].upper() + args[1][1:].lower()
 
-    if inspect:
-        target = attendance.get_participant(inspectTarget)
+        days = None
+        months = None
+
+        if (len(args) > 2):
+            if (len(args) == 3 or args[3] in ['month', 'months']): months=int(args[2])
+            elif (args[3] in ['day', 'days']): days=int(args[2])
+        
+        target = attendance.get_participant(name, days=days, months=months)
 
         if len(target['raids']) is 0:
-            message = 'No attended raids registered.'
+            message = 'No attended raids registered for ' + name + '.'
         else:
-            message =  'Attendance for ' + inspectTarget + ': \n'
+            message =  'Attendance for ' + name + ': \n'
             message += 'Total attendance: ' + str(round(target['attendance'] * 100, 1)) + '%.\n'
 
             attended_raids = [getDateFromtimestamp(raid) for raid in target['raids']]
-            message += 'Raids attended: '
+            message += 'Raids attended (' + str(len(target['raids'])) + '): '
             message += ', '.join(attended_raids) + '\n'
             
             missed_raids = [getDateFromtimestamp(raid) for raid in target['missed_raids']]
-            message += 'Raids missed: '
+            message += 'Raids missed ('  + str(len(target['missed_raids'])) + '): '
             if (len(missed_raids) == 0): message += 'None.'
             message += ', '.join(missed_raids) + '\n'
         
         await ctx.send(content=message)
-
     else:
-        participants = attendance.get_participants()
+        if (len(args) > 0):
+            if (len(args) == 1 or args[1] in ['month', 'months']): months=int(args[0])
+            elif (args[1] in ['day', 'days']): days=int(args[0])
+        participants = attendance.get_participants(days=days, months=months)
         attendance.make_attendance_plot(participants, 'attendance_plot.png')
         await ctx.send(content="Attendance plot: ", file=discord.File(raiders.dir_path + '/attendance_plot.png'))
-
-
 # HANDLERS
 @client.event
 async def on_ready():
