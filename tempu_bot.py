@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import re
 import os
+import concurrent.futures
 
-from discord.ext.tasks import loop
+from discord.ext import tasks
 from discord.ext.commands import Bot, has_permissions, has_any_role
 
 import ranking_html_factory
@@ -31,6 +32,8 @@ debug = []
 
 past_file = JSONFile('past_raid.json')
 dates_file = JSONFile('dates.json', on_error=[])
+
+loop = asyncio.get_event_loop()
 
 with open(dir_path + '/discord_token.txt') as f:
     discord_token = f.readline()
@@ -148,21 +151,25 @@ def get_new_parses(metrics, new_parses):
         new_parses.append(summary)
 
 # LOOPS
-@loop(hours=1)
+@tasks.loop(hours=1)
 async def update_raiders_task():
     print(timestamp(), 'update_raiders_task started')
     raiders.update_raiders()
     print(timestamp(), 'update_raiders_task finished')
 
 fights_to_plot = []
-@loop(seconds=20)
+@tasks.loop(seconds=20)
 async def wclRaidTask():
     dates = dates_file.read()
     for entry in dates:
         if 'wclRaidTask' in debug: print(timestamp(), 'wclRaidTask', entry['id'], entry['start'], entry['end'], isNow(entry['start'], entry['end']))
 
         if (isNow(entry['start'], entry['end'])):
-            get_new_parses(['dps', 'hps'], fights_to_plot)
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            await asyncio.wait(
+                fs={loop.run_in_executor(executor, get_new_parses, ['dps', 'hps'], fights_to_plot)}, 
+                return_when=asyncio.ALL_COMPLETED)
+            executor.shutdown()
 
     while (len(fights_to_plot) > 0):     
         f = fights_to_plot[0]
@@ -258,16 +265,6 @@ async def wclRaidTask():
         os.remove(image_path)
 
         del fights_to_plot[0]
-
-# COMMANDS
-@client.command(name = 'echo')
-@has_any_role('Officer', 'Admin')
-async def echo(ctx, *args):
-    print(timestamp(), 'echo', ctx.author, args)
-    await ctx.message.delete()
-    if (len(args) > 0): 
-        await ctx.send(content=' '.join(args))
-    else: await ctx.send(content='echo')
 
 @client.command(name = 'forget', help='Removes a specific boss from the list of cleared bosses this week. Example: \'!forget Rag\'')
 @has_any_role('Officer', 'Admin')

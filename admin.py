@@ -1,10 +1,13 @@
-from discord.ext.commands import Cog, command, has_permissions
+from discord.ext.commands import Cog, command, has_permissions, has_any_role
 import discord
 import re
 
 import defs
+from file_handling import JSONFile
 
-disabled_commands = ['clear']
+admin_file = JSONFile('admin.json')
+
+admin_file.get('welcome_message', on_error='')
 
 class Admin(Cog):
     def __init__(self, bot):
@@ -13,25 +16,53 @@ class Admin(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member):
-        channel = member.guild.system_channel
-        if channel is not None:
-            await channel.send('Welcome {0.mention}.'.format(member))
+        await member.send(admin_file.get('welcome_message'))
+        
+    @command(name = 'echo')
+    @has_any_role('Officer', 'Admin')
+    async def echo(self, ctx, *args):
+        await ctx.message.delete()
+        await ctx.send(content=' '.join(args) + ' :slight_smile:')
+        print(defs.timestamp(), 'echo', ctx.author, args)
+
+    @command(name='welcome', help='Displays the welcome message.')
+    @has_any_role('Officer', 'Admin')
+    async def welcome(self, ctx, *args):
+        await ctx.message.delete()
+        print(defs.timestamp(), 'welcome', ctx.author, args)
+        await ctx.send(admin_file.get('welcome_message'))
+
+    @command(name='setwelcome', help='Sets the welcome message.')
+    @has_permissions(administrator=True)
+    async def setwelcome(self, ctx, *args):
+        await ctx.message.delete()
+        print(defs.timestamp(), 'welcome', ctx.author, args)
+
+        message = ' '.join(args)
+        
+        admin_file.set('welcome_message', message)
+        await ctx.send('Welcome message set to \'{}\'.'.format(admin_file.get('welcome_message')))
+
 
     @command(name='disable', help='Disables command. Example: \'!disable clear\'')
     @has_permissions(administrator=True)
     async def disable(self, ctx, *args):
         await ctx.message.delete()
+        print(defs.timestamp(), 'disable', ctx.author, args)
         if (len(args) != 1):
             await ctx.send('Incorrect amount of arguments received. ({})'.format(len(args)), delete_after=10)
             return
         
         command = args[0]
 
+        disabled_commands = admin_file.get('disabled_commands')
+
         if (command in disabled_commands):
             await ctx.send('Command \'!{}\' already disabled.'.format(command), delete_after=10)
             return
 
         disabled_commands.append(command)
+        admin_file.set('disabled_commands', disabled_commands)
 
         await ctx.send('Command \'!{}\' disabled.'.format(command), delete_after=10)
 
@@ -39,17 +70,21 @@ class Admin(Cog):
     @has_permissions(administrator=True)
     async def enable(self, ctx, *args):
         await ctx.message.delete()
+        print(defs.timestamp(), 'enable', ctx.author, args)
         if (len(args) != 1):
             await ctx.send('Incorrect amount of arguments received. ({})'.format(len(args)), delete_after=10)
             return
         
         command = args[0]
+        
+        disabled_commands = admin_file.get('disabled_commands')
 
         if (not command in disabled_commands):
             await ctx.send('Command \'!{}\' is not disabled.'.format(command), delete_after=10)
             return
 
         del disabled_commands[disabled_commands.index(command)]
+        admin_file.set('disabled_commands', disabled_commands)
 
         await ctx.send('Command \'!{}\' enabled.'.format(command), delete_after=10)
 
@@ -57,8 +92,8 @@ class Admin(Cog):
     @has_permissions(administrator=True)
     async def clear(self, ctx, *args):
         await ctx.message.delete()
-        print(defs.timestamp(), 'clear', ctx.message.author, args)
-        if (ctx.command.name in disabled_commands):
+        print(defs.timestamp(), 'clear', ctx.author, args)
+        if (ctx.command.name in admin_file.get('disabled_commands')):
             await ctx.send('Command disabled. Enable with \'!enable {}\''.format(ctx.command.name), delete_after=5)
             return
             
