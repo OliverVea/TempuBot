@@ -1,13 +1,9 @@
-import json
 import os 
-from defs import dir_path, encoding
-raiders_file_path = dir_path + '/raiders.json'
+from defs import dir_path
 
-def newRaider():
-    raider = {}
-    raider['class'] = ''
-    raider['role'] = ''
-    raider['signoffs'] = []
+from file_handling import JSONFile
+
+raiders_file = JSONFile('raiders.json')
 
 def getRaiderAttribute(name, attribute):
     name = name.lower()
@@ -16,29 +12,8 @@ def getRaiderAttribute(name, attribute):
     raider = raiders[name]
     return raider[attribute]
 
-def setRaiderAttribute(name, attribute, value):
-    name = name.lower()
-    raiders = getRaiders()
-    if name not in raiders: return None
-    raiders[name][attribute] = value
-    json.dump(raiders, open(raiders_file_path, 'w', encoding=encoding), ensure_ascii=False, indent=4)
-
-def addRaider(name : str):
-    name = name.lower()
-    raiders = json.load(open(raiders_file_path, encoding=encoding))
-    if name not in raiders: 
-        raiders[name]  = {}
-    json.dump(raiders, open(raiders_file_path, 'w', encoding=encoding), ensure_ascii=False, indent=4)
-
-def removeRaider(name : str):
-    name = name.lower()
-    raiders = json.load(open(raiders_file_path, encoding=encoding))
-    if name in raiders: 
-        del raiders[name]
-    json.dump(raiders, open(raiders_file_path, 'w', encoding=encoding), ensure_ascii=False, indent=4)
-
 def getRaiders():
-    raiders = json.load(open(raiders_file_path, encoding=encoding))
+    raiders = raiders_file.read()
     return raiders
 
 def getRaiderNames():
@@ -48,13 +23,40 @@ def getRaiderNames():
 
 def raiderExists(name : str):
     name = name.lower()
-    raiders = json.load(open(raiders_file_path, encoding=encoding))
+    raiders = getRaiders()
     return (name in raiders)
 
 def getRaiderAmount():
-    raiders = json.load(open(raiders_file_path, encoding=encoding))
+    raiders = getRaiders()
     return len(raiders)
 
-def resetFile():
-    emptyObj = {}
-    json.dump(emptyObj, open(raiders_file_path, 'w', encoding=encoding))
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+scope = ['https://spreadsheets.google.com/feeds',
+         'https://www.googleapis.com/auth/drive']
+creds = ServiceAccountCredentials.from_json_keyfile_name(dir_path + '/client_secret.json', scope)
+client = gspread.authorize(creds)
+
+def update_raiders():
+    sheet = client.open("Hive Mind Officer docs").get_worksheet(3)
+    sheet = sheet.get_all_values()
+
+    header_row = [cell.strip().lower() for cell in sheet[2]]
+
+    col_name = header_row.index('name')
+    col_class = header_row.index('class')
+    col_role = header_row.index('role')
+    col_rank = header_row.index('rank')
+
+    names = [row[col_name].strip().lower() for row in sheet[3:] if row[col_name] != '']
+    classes = [row[col_class].strip().lower() for row in sheet[3:] if row[col_name] != '']
+    roles = [row[col_role].strip().lower() for row in sheet[3:] if row[col_name] != '']
+    ranks = [row[col_rank].strip().lower() for row in sheet[3:] if row[col_name] != '']
+
+    raiders = {}
+
+    for i, name in enumerate(names):
+        raiders[name] = {'class': classes[i], 'role': roles[i], 'rank': ranks[i]}
+
+    raiders_file.write(raiders)

@@ -1,0 +1,23 @@
+import json
+
+from defs import timestamp, dir_path
+
+class JSONFile():
+    def __init__(self, filename, on_error = {}, encoding='utf-16-le'):
+        self.filename = dir_path + '/json/' + filename
+        self.on_error = on_error
+        self.encoding = encoding
+        pass
+
+    def read(self):
+        try:
+            with open(self.filename, encoding=self.encoding) as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(timestamp(), 'tried to load file:', self.filename, 'raised error', e)
+            self.write(self.on_error)
+            return self.on_error
+
+    def write(self, object):
+        with open(self.filename, 'w', encoding=self.encoding) as f:
+            return json.dump(object, f, ensure_ascii=False, indent=4)

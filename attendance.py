@@ -2,14 +2,18 @@ from time import time
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+plt.style.use('discord')
 
-from defs import dir_path, timestamp, load_json_file, colors
+from defs import dir_path, timestamp, colors
 import defs
 from wrapper_warcraftlogs import getReportsGuild, getReportFightCode
 from raiders import raiderExists, getRaiderAttribute
+from file_handling import JSONFile
 
 earliest_next_update = 30 * 60 #Minutes
 last_update = 0
+
+attendance_file = JSONFile('attendance.json')
 
 def get_query_start(days, months):
     query_start = 0
@@ -44,7 +48,7 @@ def filter_raids(raids):
 
 def get_attendance(guild='Hive Mind', update_attendance = True, days = None, months = None):
     global last_update, earliest_next_update
-    attendance = load_json_file(dir_path + '/attendance.json')
+    attendance = attendance_file.read()
 
     if guild not in attendance:
         attendance[guild] = {}
@@ -64,7 +68,7 @@ def get_attendance(guild='Hive Mind', update_attendance = True, days = None, mon
                 raid_entry = {'start': raid['start'], 'title': raid['title'], 'participants': participants}
 
                 attendance[guild][raid['id']] = raid_entry
-            json.dump(attendance, open(dir_path + '/attendance.json', 'w', encoding=defs.encoding), ensure_ascii=False, indent=4)
+            attendance_file.write(attendance)
 
     ids = [raid_id for raid_id in attendance[guild]]
     for raid_id in ids:
@@ -142,21 +146,21 @@ def make_attendance_plot(participants, figurename):
 
     attendances.sort(key= lambda x: x[1], reverse=True)
     names = [entry[0] for entry in attendances]
-    attendances = [entry[1] for entry in attendances]
+    attendances = [entry[1] * 100 for entry in attendances]
 
     cols = [colors[getRaiderAttribute(name, 'class')] for name in names]
     
     y_pos = np.arange(len(names))
 
-    for i in y_pos:
-        names[i] = names[i] + ' (' + str(round(attendances[i] * 100, 1)) + '%)'
+
+    names = ['{} ({}%)'.format(name, round(attendances[i],1)) for i, name in enumerate(names)]
 
     _, ax = plt.subplots(figsize=(20,15))
 
-    ax.barh(y_pos, attendances, color=cols, edgecolor='black', linestyle='-', linewidth=1)
+    ax.barh(y_pos, attendances, color=cols, edgecolor='white', linestyle='-', linewidth=0)
     ax.set_yticks(y_pos)
     ax.set_yticklabels(names)
     ax.invert_yaxis()  # labels read top-to-bottom
-    ax.set_xlabel('Attendance', color='white')
+    ax.set_xlabel('Attendance [%]', color='white')
 
     plt.savefig(dir_path + '/' + figurename)
