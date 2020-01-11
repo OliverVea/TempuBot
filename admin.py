@@ -110,11 +110,10 @@ class Admin(Cog):
                 await ctx.send('Argument \'{}\' in message \'{}\' not understood.'.format(arg, ctx.message.content), delete_after=10)
                 return
 
-
         if (mention_id != None and to_clear != -1):
             while to_clear > 0 :
-                messages = await ctx.message.channel.history(limit=min(to_clear, 100)).flatten()
-                messages = [message for message in messages if message.author.id == mention_id]
+                messages = await ctx.message.channel.history(limit=100).flatten()
+                messages = [message for message in messages if message.author.id == mention_id][:to_clear]
                 if (len(messages) == 0): break
                 to_clear -= len(messages)
                 await ctx.message.channel.delete_messages(messages)
@@ -129,3 +128,4 @@ class Admin(Cog):
                 messages = await ctx.message.channel.history(limit=min(to_clear, 100)).flatten()
                 to_clear -= len(messages)
                 await ctx.message.channel.delete_messages(messages)
+        
