@@ -88,3 +88,11 @@ A big part of being able to make the boss fight summaries is to have a record of
 Example use:  
 `!forget Ragnaros` removes Ragnaros from the boss kill record.  
 `!forget majo` removes Majordomo Executus from the boss kill record.  
+
+## Todo
+1. Redo attendance (change command, turn into separate class)
+2. Redo schedule (add commands for sign-offs, turn into separate class)
+
+potential bambi things:  
+- add reactions
+- add loot sheet interaction (already kinda done)
