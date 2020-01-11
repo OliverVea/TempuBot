@@ -4,10 +4,37 @@ This is a discord bot developed by Archmage Tempia of the guild Hive Mind on Zan
 ## Commands
 
 ### Echo
-This command echoes whatever you write back and deletes your message. If only the command is called, it replies 'echo'. The primary purpose of this command is debugging and lulz.  
+This command echoes whatever you write back with a little added ayaya and deletes your message. The primary purpose of this command is debugging and lulz.  
 Example use:  
-`!echo` the bot replies 'echo'.  
-`!echo Matitka Sucks!` the bot replies 'Matitka Sucks!'. Good bot.  
+`!echo` the bot replies ':slight_smile:'.  
+`!echo Matitka Sucks!` the bot replies 'Matitka Sucks! :slight_smile:'. Good bot.  
+
+### Welcome
+This command just echoes the current welcome message. This allows us to see the welcome message without rejoining the server.  
+Example use:  
+`!welcome` the bot replies with the welcome message.
+
+### Setwelcome
+This command is used to set the welcome message.  
+Example use:  
+`!setwelcome x3 nuzzles! pounces on you uwu you so warm` sets a very uwu welcome message.  
+
+### Enable
+This admin-only command enables the use of another command if it has been disabled. Currently only the clear command can be disabled.  
+Example use:  
+`!enable clear` enables the use of the clear command.
+
+### Disable
+This admin-only command disables the use of another command. Can only be used on clear currently.  
+Example use:  
+`!disable clear` disables the use of the clear command.
+
+### Clear
+This admin-only command clears messages from the channel it is sent in. The command takes one or both of two arguments: which members messages to clear and how many messages to clear.  
+Example use:  
+`!clear 15` clears the last 15 messages in the channel.  
+`!clear @Matitka` clears the messages sent by Matitka within the last 100 messages in the channel.  
+`!clear @Matitka 15` clears the last 15 messages sent by Matitka.
 
 ### Attendance
 This command is used to get a bar graph of the raiders' attendances.  
