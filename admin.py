@@ -18,11 +18,30 @@ class Admin(Cog):
     async def on_member_join(self, member):
         await member.send(admin_file.get('welcome_message'))
         
+    @Cog.listener()
+    async def on_message(self, message):
+        if ('bambi' in message.content.lower() and admin_file.get('reaction_bambi', False)):
+            emojis = list(message.guild.emojis)
+            for emoji in emojis:
+                if (emoji.name.lower() == 'bambi'):
+                    await message.add_reaction(emoji)
+                    return      
+                    
+        if ('temp' in message.content.lower() and admin_file.get('reaction_tempia', False)):
+            emojis = list(message.guild.emojis)
+            for emoji in emojis:
+                if (emoji.name.lower() == 'ayaya'):
+                    await message.add_reaction(emoji)
+                    return      
+
     @command(name = 'echo')
     @has_any_role('Officer', 'Admin')
     async def echo(self, ctx, *args):
         await ctx.message.delete()
-        await ctx.send(content=' '.join(args) + ' :slight_smile:')
+        if (admin_file.get('smile', False)):
+            args = list(args)
+            args.append(':slight_smile:')
+        await ctx.send(content=' '.join(args))
         print(defs.timestamp(), 'echo', ctx.author, args)
 
     @command(name='welcome', help='Displays the welcome message.')
@@ -43,7 +62,6 @@ class Admin(Cog):
         admin_file.set('welcome_message', message)
         await ctx.send('Welcome message set to \'{}\'.'.format(admin_file.get('welcome_message')))
 
-
     @command(name='disable', help='Disables command. Example: \'!disable clear\'')
     @has_permissions(administrator=True)
     async def disable(self, ctx, *args):
@@ -52,19 +70,8 @@ class Admin(Cog):
         if (len(args) != 1):
             await ctx.send('Incorrect amount of arguments received. ({})'.format(len(args)), delete_after=10)
             return
-        
-        command = args[0]
-
-        disabled_commands = admin_file.get('disabled_commands')
-
-        if (command in disabled_commands):
-            await ctx.send('Command \'!{}\' already disabled.'.format(command), delete_after=10)
-            return
-
-        disabled_commands.append(command)
-        admin_file.set('disabled_commands', disabled_commands)
-
-        await ctx.send('Command \'!{}\' disabled.'.format(command), delete_after=10)
+            
+        admin_file.set(args[0], False)
 
     @command(name='enable', help='Enables command that was previously disabled. Example: \'!enable clear\'')
     @has_permissions(administrator=True)
@@ -73,27 +80,16 @@ class Admin(Cog):
         print(defs.timestamp(), 'enable', ctx.author, args)
         if (len(args) != 1):
             await ctx.send('Incorrect amount of arguments received. ({})'.format(len(args)), delete_after=10)
-            return
-        
-        command = args[0]
-        
-        disabled_commands = admin_file.get('disabled_commands')
-
-        if (not command in disabled_commands):
-            await ctx.send('Command \'!{}\' is not disabled.'.format(command), delete_after=10)
-            return
-
-        del disabled_commands[disabled_commands.index(command)]
-        admin_file.set('disabled_commands', disabled_commands)
-
-        await ctx.send('Command \'!{}\' enabled.'.format(command), delete_after=10)
+            return      
+            
+        admin_file.set(args[0], True)
 
     @command(name='clear', help='Clears X messages, where X is the argument. Example: \'!clear 50\'')
     @has_permissions(administrator=True)
     async def clear(self, ctx, *args):
         await ctx.message.delete()
         print(defs.timestamp(), 'clear', ctx.author, args)
-        if (ctx.command.name in admin_file.get('disabled_commands')):
+        if (not admin_file.get(ctx.command.name, True)):
             await ctx.send('Command disabled. Enable with \'!enable {}\''.format(ctx.command.name), delete_after=5)
             return
             
