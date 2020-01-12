@@ -62,6 +62,7 @@ Example use:
 `!clear @Matitka 15` clears the last 15 messages sent by Matitka.
 
 ### Clearuntil
+(**admin**)
 This command clears messages until it reaches the message that matches the argument. Matching, in this case, means that the message will match the argument from the beginning of the message. If the target message to clear until is 'Matitka should just get better at the game tbh', 'Matitka should just' would work and 'should just get better' would **not** work. The matching is case sensitive so 'matitka should just' wouldn't work either. In addition, the command is also sensitive to formatting like **bold** and *italic* text. The primary use of this is to copy-paste the taget message.  
 Example use:  
 `!clear Matitka should just` clears all messages up to and including the latest message that starts with 'Matitka should just'.
@@ -97,6 +98,7 @@ Example use:
 `!signoffs 12.01` makes the bot post the sign offs and what the remaining raid setup is for the 12th of January.
 
 ### Setsignoffschannel
+(**admin**)
 This command makes the bot post the signoff messages to the current channel.  
 Example use:  
 `!setsignoffschannel` sets the signoffs channel to the current channel.
