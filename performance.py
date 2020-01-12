@@ -9,6 +9,9 @@ from wrapper_warcraftlogs import getReportsGuild, getReportFightCode
 import asyncio
 import os
 import discord
+from multiprocessing import Process
+import gc
+
 
 from discord.ext import tasks
 from discord.ext.commands import Cog, command, has_any_role
@@ -31,7 +34,6 @@ def get_fight_summary(fight, metrics, report_info):
 
         chrome_options = Options()
         chrome_options.add_argument('--headless')
-        chrome_options.add_argument("keep_alive=True")
         chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
         print(defs.timestamp(), '*' + url_dps)
@@ -61,6 +63,9 @@ def get_fight_summary(fight, metrics, report_info):
                 row_stats['ipercentile'] = int(cell_elements[7].text)
 
                 summary['parses'][name] = row_stats
+                
+    driver.close()
+    driver.quit()
     return summary
 
 def get_new_parses(metrics, new_parses):
@@ -82,6 +87,86 @@ def get_new_parses(metrics, new_parses):
         past = {'start': report_info['start'], 'bosses': bosses}
         performance_file.write(past)
         new_parses.append(summary)
+
+def plot_fight(f, image_path):
+    fight = f['fight']
+    parses = f['parses']
+
+    melee_parses = []
+    ranged_parses = []
+    healer_parses = []
+
+    for name in parses:
+        if (raiders.getRaiderAttribute(name, 'role') == 'ranged'): ranged_parses.append(name)
+        elif (raiders.getRaiderAttribute(name, 'role') == 'melee'): melee_parses.append(name)
+        elif (raiders.getRaiderAttribute(name, 'role') == 'healer'): healer_parses.append(name)
+
+    group_names = ['Melee', 'Ranged', 'Healers']
+    metric = ['DPS', 'DPS', 'HPS']
+
+    tables = ""
+    for i, current_parses in enumerate([melee_parses, ranged_parses, healer_parses]):
+        rows = ""
+        for j, name in enumerate(current_parses[:3]):
+            parse = parses[name]
+            percentile = parse['percentile']
+            class_color = defs.colors[raiders.getRaiderAttribute(name, 'class')]
+            rows += ranking_html_factory.get_row(
+                number=str(j + 1), 
+                name=name.capitalize(),
+                name_color=class_color,
+                parse=str(percentile), 
+                parse_color=defs.getParseColor(percentile), 
+                rank=parse['rank'],
+                dps=str(parse['dps']), 
+            )
+        
+        avg_parse = 0
+        avg_rank = 0
+        avg_dps = 0
+
+        n = len(current_parses)
+
+        for name in current_parses:
+            avg_parse += parses[name]['percentile'] / n
+            avg_rank += int(parses[name]['rank'].replace('~','')) / n
+            avg_dps += parses[name]['dps'] / n
+            
+        avg_parse = round(avg_parse, 1)
+        avg_rank = int(avg_rank)
+        avg_dps = round(avg_dps, 1)
+
+        tables += ranking_html_factory.get_table(
+            group_name=group_names[i], 
+            metric=metric[i],
+            rows=rows, 
+            avg_parse=str(avg_parse), 
+            avg_parse_color=defs.getParseColor(avg_parse),
+            avg_rank=str(avg_rank),
+            avg_dps=str(avg_dps)
+        )
+
+    html = ranking_html_factory.get_html(fight['name'], tables)
+
+    html_path = defs.dir_path + '/boss_summaries/' + fight['name'] + '.html'
+    with open(html_path, 'w') as file:
+        file.write(html)
+
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
+    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+
+    driver = webdriver.Chrome(options=chrome_options)
+    driver.get('file:///' + html_path)
+
+    body = driver.find_element_by_tag_name('body')
+    size = body.size
+    driver.set_window_size(size['width'], size['height'])
+
+    driver.save_screenshot(image_path)
+
+    driver.close()
+    driver.quit()
 
 class Performance(Cog):
     def __init__(self, bot):
@@ -126,81 +211,12 @@ class Performance(Cog):
             fight = f['fight']
             parses = f['parses']
             report = f['report']
-
-            melee_parses = []
-            ranged_parses = []
-            healer_parses = []
-
-            for name in parses:
-                if (raiders.getRaiderAttribute(name, 'role') == 'ranged'): ranged_parses.append(name)
-                elif (raiders.getRaiderAttribute(name, 'role') == 'melee'): melee_parses.append(name)
-                elif (raiders.getRaiderAttribute(name, 'role') == 'healer'): healer_parses.append(name)
-
-            group_names = ['Melee', 'Ranged', 'Healers']
-            metric = ['DPS', 'DPS', 'HPS']
-
-            tables = ""
-            for i, current_parses in enumerate([melee_parses, ranged_parses, healer_parses]):
-                rows = ""
-                for j, name in enumerate(current_parses[:3]):
-                    parse = parses[name]
-                    percentile = parse['percentile']
-                    class_color = defs.colors[raiders.getRaiderAttribute(name, 'class')]
-                    rows += ranking_html_factory.get_row(
-                        number=str(j + 1), 
-                        name=name.capitalize(),
-                        name_color=class_color,
-                        parse=str(percentile), 
-                        parse_color=defs.getParseColor(percentile), 
-                        rank=parse['rank'],
-                        dps=str(parse['dps']), 
-                    )
-                
-                avg_parse = 0
-                avg_rank = 0
-                avg_dps = 0
-
-                n = len(current_parses)
-
-                for name in current_parses:
-                    avg_parse += parses[name]['percentile'] / n
-                    avg_rank += int(parses[name]['rank'].replace('~','')) / n
-                    avg_dps += parses[name]['dps'] / n
-                    
-                avg_parse = round(avg_parse, 1)
-                avg_rank = int(avg_rank)
-                avg_dps = round(avg_dps, 1)
-
-                tables += ranking_html_factory.get_table(
-                    group_name=group_names[i], 
-                    metric=metric[i],
-                    rows=rows, 
-                    avg_parse=str(avg_parse), 
-                    avg_parse_color=defs.getParseColor(avg_parse),
-                    avg_rank=str(avg_rank),
-                    avg_dps=str(avg_dps)
-                )
-
-            html = ranking_html_factory.get_html(fight['name'], tables)
-            link = 'https://classic.warcraftlogs.com/reports/' + str(report['id']) + '#fight=' + str(fight['id'])
-
-            html_path = defs.dir_path + '/boss_summaries/' + fight['name'] + '.html'
+            
             image_path = defs.dir_path + '/boss_summaries/' + fight['name'] + '.png'
-            with open(html_path, 'w') as file:
-                file.write(html)
 
-            chrome_options = Options()
-            chrome_options.add_argument('--headless')
-            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            await asyncio.wait(fs={loop.run_in_executor(None, plot_fight, f, image_path)})
 
-            driver = webdriver.Chrome(options=chrome_options)
-            driver.get('file:///' + html_path)
-
-            body = driver.find_element_by_tag_name('body')
-            size = body.size
-            driver.set_window_size(size['width'], size['height'])
-
-            driver.save_screenshot(image_path)
+            link = 'https://classic.warcraftlogs.com/reports/' + str(report['id']) + '#fight=' + str(fight['id'])
 
             pre_message = "__**" + fight['name'] + "**__" + '\n'
             pre_message += 'Participants: ' + str(len(parses)) + '\n'
@@ -209,9 +225,9 @@ class Performance(Cog):
             post_message = "Log link: " + link 
 
             channel = self.bot.get_channel(entry['id'])
-
             await channel.send(content=pre_message, file=discord.File(image_path))
             await channel.send(content=post_message)
             os.remove(image_path)
 
             del self.to_plot[0]
+            gc.collect()
