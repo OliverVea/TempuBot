@@ -1,4 +1,5 @@
 from discord.ext.commands import Cog, command, has_permissions, has_any_role
+from random import choice
 import discord
 import re
 
@@ -12,11 +13,11 @@ admin_file.get('welcome_message', on_error='')
 class Admin(Cog):
     def __init__(self, bot):
         self.bot = bot
-        self._last_member = None
 
     @Cog.listener()
     async def on_member_join(self, member):
         await member.send(admin_file.get('welcome_message'))
+        print(defs.timestamp(), member, 'joined server.')
         
     @Cog.listener()
     async def on_message(self, message):
@@ -37,36 +38,75 @@ class Admin(Cog):
     @command(name = 'echo')
     @has_any_role('Officer', 'Admin')
     async def echo(self, ctx, *args):
-        await ctx.message.delete()
-        if (admin_file.get('smile', False)):
-            args = list(args)
-            args.append(':slight_smile:')
-        await ctx.send(content=' '.join(args))
-        print(defs.timestamp(), 'echo', ctx.author, args)
+        try: await ctx.message.delete()
+        except: pass
+        if len(ctx.message.content) == len(ctx.command.name) + 1:
+            emojis = list(ctx.message.guild.emojis)
+            await ctx.send(choice(emojis))
+        else:
+            await ctx.send(ctx.message.content[len(ctx.command.name) + 2:])
+        print(defs.timestamp(), 'echo', ctx.author, ctx.channel.name, args)
+
+    @command(name = 'announcementchannel')
+    @has_any_role('Admin')
+    async def announcementchannel(self, ctx, *args):
+        try: 
+            admin_file.set('announcement_channel_id', ctx.message.channel.id)
+            await ctx.message.delete()
+        except:
+            pass    
+        print(defs.timestamp(), 'announcement_channel', ctx.author, ctx.channel.name, args)
+
+    @command(name = 'annend')
+    @has_any_role('Admin')
+    async def announementend(self, ctx, *args):
+        try: 
+            admin_file.set('announcement_end', ctx.message.content[len(ctx.command.name) + 2:])
+            await ctx.message.delete()
+        except:
+            pass
+        print(defs.timestamp(), 'announcement_channel', ctx.author, ctx.channel.name, args)
+
+    @command(name = 'ann')
+    @has_any_role('Officer', 'Admin')
+    async def announcement(self, ctx, *args):
+        print(defs.timestamp(), 'ann', ctx.author, ctx.channel.name, args)
+        try: 
+            await ctx.message.delete()
+            channel_id = admin_file.get('announcement_channel_id')
+            channel = self.bot.get_channel(channel_id)
+            message = ctx.message.content[len(ctx.command.name) + 2:] + '\n'
+            message += admin_file.get('announcement_end', on_error='')
+            await channel.send(message)
+        except: 
+            pass
 
     @command(name='welcome', help='Displays the welcome message.')
     @has_any_role('Officer', 'Admin')
     async def welcome(self, ctx, *args):
-        await ctx.message.delete()
-        print(defs.timestamp(), 'welcome', ctx.author, args)
+        try: await ctx.message.delete()
+        except: pass
         await ctx.send(admin_file.get('welcome_message'))
+        print(defs.timestamp(), 'welcome', ctx.author, ctx.channel.name, args)
 
     @command(name='setwelcome', help='Sets the welcome message.')
     @has_permissions(administrator=True)
     async def setwelcome(self, ctx, *args):
-        await ctx.message.delete()
-        print(defs.timestamp(), 'welcome', ctx.author, args)
+        try: await ctx.message.delete()
+        except: pass
 
         message = ' '.join(args)
         
         admin_file.set('welcome_message', message)
         await ctx.send('Welcome message set to \'{}\'.'.format(admin_file.get('welcome_message')))
+        print(defs.timestamp(), 'welcome', ctx.author, ctx.channel.name, args)
 
     @command(name='disable', help='Disables command. Example: \'!disable clear\'')
     @has_permissions(administrator=True)
     async def disable(self, ctx, *args):
-        await ctx.message.delete()
-        print(defs.timestamp(), 'disable', ctx.author, args)
+        try: await ctx.message.delete()
+        except: pass
+        print(defs.timestamp(), 'disable', ctx.author, ctx.channel.name, args)
         if (len(args) != 1):
             await ctx.send('Incorrect amount of arguments received. ({})'.format(len(args)), delete_after=10)
             return
@@ -76,8 +116,9 @@ class Admin(Cog):
     @command(name='enable', help='Enables command that was previously disabled. Example: \'!enable clear\'')
     @has_permissions(administrator=True)
     async def enable(self, ctx, *args):
-        await ctx.message.delete()
-        print(defs.timestamp(), 'enable', ctx.author, args)
+        try: await ctx.message.delete()
+        except: pass
+        print(defs.timestamp(), 'enable', ctx.author, ctx.channel.name, args)
         if (len(args) != 1):
             await ctx.send('Incorrect amount of arguments received. ({})'.format(len(args)), delete_after=10)
             return      
@@ -87,8 +128,9 @@ class Admin(Cog):
     @command(name='clear', help='Clears X messages, where X is the argument. Example: \'!clear 50\'')
     @has_permissions(administrator=True)
     async def clear(self, ctx, *args):
-        await ctx.message.delete()
-        print(defs.timestamp(), 'clear', ctx.author, args)
+        try: await ctx.message.delete()
+        except: pass
+        print(defs.timestamp(), 'clear', ctx.author, ctx.channel.name, args)
         if (not admin_file.get(ctx.command.name, True)):
             await ctx.send('Command disabled. Enable with \'!enable {}\''.format(ctx.command.name), delete_after=5)
             return
@@ -128,4 +170,23 @@ class Admin(Cog):
                 messages = await ctx.message.channel.history(limit=min(to_clear, 100)).flatten()
                 to_clear -= len(messages)
                 await ctx.message.channel.delete_messages(messages)
+        
+    @command(name='clearuntil', help='Clears messages until a message starting with the argument is found. Example: \'!clearuntil Matitka Sucks\'')
+    @has_permissions(administrator=True)
+    async def clear_until(self, ctx, *args):
+        print(defs.timestamp(), 'clearuntil', ctx.author, ctx.channel.name, args)
+        if (len(args) == 0):
+            await ctx.send()
+            return 
+
+        arg = ' '.join(args)
+        messages = await ctx.message.channel.history(limit=100).flatten()
+        matches = [message.content.startswith(arg) for message in messages]
+
+        if True in matches:
+            messages = messages[:matches.index(True) + 1]
+            await ctx.message.channel.delete_messages(messages)
+        else:
+            await ctx.send('Message \'{}\' not found.'.format(arg), delete_after=10)
+
         

@@ -5,6 +5,19 @@ import json
 
 dir_path = dirname(realpath(__file__))
 
+bossEncounterIDs = {
+    663: 'Lucifron', 
+    664: 'Magmadar', 
+    665: 'Gehennas', 
+    666: 'Garr', 
+    667: 'Baron Geddon', 
+    668: 'Shazzrah', 
+    669: 'Sulfuron Harbinger', 
+    670: 'Golemagg the Incinerator',
+    671: 'Majordomo Executus', 
+    672: 'Ragnaros', 
+    1084: 'Onyxia'}
+    
 colors = {
     'death knight': '#C41F3B', 
     'demon hunter': '#A330C9', 
@@ -21,6 +34,21 @@ colors = {
     'discord': '#36393f'
     }
 
+classes = [
+    'death knight', 
+    'demon hunter', 
+    'druid', 
+    'hunter', 
+    'mage', 
+    'monk', 
+    'paladin', 
+    'priest',
+    'rogue', 
+    'shaman', 
+    'warlock', 
+    'warrior'
+]
+
 def getParseColor(parse):
     if (parse == 100): return '#e5cc80'
     elif (parse == 99): return '#e268a8'
@@ -32,3 +60,12 @@ def getParseColor(parse):
 
 def timestamp():
     return '[' + datetime.now().strftime('%H:%M:%S') + ']'
+
+def get_options(args):
+    args_copy = [arg for arg in args]
+    options = []
+    for arg in args_copy:
+        if arg.startswith('-'):
+            options.append(arg)
+            del args[args.index(arg)]
+    return options

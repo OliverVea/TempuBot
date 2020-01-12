@@ -1,7 +1,10 @@
 import os 
-from defs import dir_path
+import asyncio
+from discord.ext import tasks
+from discord.ext.commands import Cog, command
 
 from file_handling import JSONFile
+import defs
 
 raiders_file = JSONFile('raiders.json')
 
@@ -30,15 +33,20 @@ def getRaiderAmount():
     raiders = getRaiders()
     return len(raiders)
 
+def all_with_attribute(attribute, value):
+    raiders = getRaiders()
+    return {raider:raiders[raider] for raider in raiders if raiders[raider][attribute] == value}
+
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name(dir_path + '/client_secret.json', scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name(defs.dir_path + '/client_secret.json', scope)
 client = gspread.authorize(creds)
 
 def update_raiders():
+    print(defs.timestamp(), 'update_raiders_task started')
     sheet = client.open("Hive Mind Officer docs").get_worksheet(3)
     sheet = sheet.get_all_values()
 
@@ -60,3 +68,18 @@ def update_raiders():
         raiders[name] = {'class': classes[i], 'role': roles[i], 'rank': ranks[i]}
 
     raiders_file.write(raiders)
+    print(defs.timestamp(), 'update_raiders_task finished')
+
+
+class Raiders(Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.update_raiders_task.start()
+
+    def cog_unload(self):
+        self.update_raiders_task.cancel()
+    
+    @tasks.loop(hours=1)
+    async def update_raiders_task(self):
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, update_raiders)
