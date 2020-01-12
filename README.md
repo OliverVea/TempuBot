@@ -104,19 +104,19 @@ Example use:
 (**admin**, **officer**)
 This command lists the raids in the schedule. The schedule is used to limit the amount of spam we cause to the warcraftlogs server. The bot will only check for new boss kills within the windows specified by the schedule.  
 Example use:  
-`!listraids`
+`!lr`
 
 ### Ar
 (**admin**)
 This command will add a raid to the schedule. Don't use this command unless you need to and you're supervised by an adult.  
 Example use:  
-`!addraid sunday 19.30 sunday 23.00` adds the sunday raid to the schedule.
+`!ar sunday 19.30 sunday 23.00` adds the sunday raid to the schedule.
 
 ### Rr
 (**admin**)
 This command will remove a raid from the schedule. Note you will need the index from `!listraids` to specify which raid to remove.  
 Example use:  
-`!removeraid 1` removes the second(!) raid from the schedule - the one with the index 1 in `!listraids`.
+`!rr 1` removes the second(!) raid from the schedule - the one with the index 1 in `!listraids`.
 
 ### Forget
 (**admin**, **officer**)
