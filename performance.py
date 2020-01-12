@@ -58,7 +58,7 @@ def get_fight_summary(fight, metrics, report_info):
                 row_stats['rank'] = cell_elements[1].text
                 row_stats['out_of'] = int(cell_elements[2].text.replace(',', ''))
                 row_stats['best_rank'] = cell_elements[3].text
-                row_stats['dps'] = float(cell_elements[5].text)
+                row_stats['dps'] = float(cell_elements[5].text.replace(',', ''))
                 row_stats['ilvl'] = int(cell_elements[6].text)
                 row_stats['ipercentile'] = int(cell_elements[7].text)
 

@@ -6,6 +6,7 @@ from discord.ext.commands import Cog, command, has_permissions, has_any_role, dm
 
 import defs
 import raiders
+import attendance
 
 from file_handling import JSONFile
 
@@ -151,9 +152,6 @@ class Schedule(Cog):
         names = []
 
         for signoff in sos_copy:
-            if signoff['end'] < time():
-                signoffs.remove(signoff)
-
             if signoff['start'] <= timestamp <= signoff['end']:
                 names.append(signoff['name'].lower().capitalize())
         
@@ -184,6 +182,28 @@ class Schedule(Cog):
         message += 'Attending ({}): '.format(attending) + ', '.join(roles)
 
         await ctx.send(message)
+
+    @command(name='noshows')
+    @has_any_role('Officer', 'Admin')
+    async def noshows(self, ctx, *args):
+        try: await ctx.message.delete()
+        except: pass
+        print(defs.timestamp(), 'noshows', ctx.author, ctx.channel.name, args)
+
+        participants = attendance.get_participants()
+        
+        date = get_date_from_string(args[0])
+        epoch = datetime.datetime(1970, 1, 1)
+        timestamp = int((date - epoch).total_seconds() * 1000)
+
+        noshows = []
+
+        for participant in participants:
+            missed_raids = participants[participant]['missed_raids']
+            if any([abs(timestamp - raid) < 24 * 3600 * 1000 for raid in missed_raids]):
+                noshows.append(participant)
+        
+        
 
     @command(name='ar')
     @has_permissions(administrator=True)
