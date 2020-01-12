@@ -1,5 +1,6 @@
 # TempuBot
 This is a discord bot developed by Archmage Tempia of the guild Hive Mind on Zandalar Tribe. The bots main purpose is to help with the administration of the guild.
+For bugfixing purposes, each time a command is used, the command, arguments, channel and author is logged.
 
 ## Commands
 
