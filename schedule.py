@@ -62,7 +62,7 @@ class Schedule(Cog):
         self.bot = bot
     
     @dm_only()
-    @command(name='signoff', help= 'This command allows you to sign off.\nWays to use this command:\n!signoff <NAME> <DATE>\n!signoff <NAME> <DATE> <REASON>\n!signoff <NAME> <START>-<END>\n!signoff <NAME> <START>-<END> <REASON>\n\nExamples:\n!signoff Tempia 12.01\n!signoff Matitka 19.01 I\'m ill.\n!signoff Bambiqt 11.03-29.03\n!signoff Peanut 23.04-13.05 Away on holiday.')
+    @command(name='signoff', help= 'This command allows you to sign off. Date is in the format DD.MM or DD/MM.\nWays to use this command:\n!signoff NAME DATE\n!signoff NAME DATE REASON\n!signoff NAME START-END\n!signoff NAME START-END REASON\n\nExamples:\n!signoff Tempia 12.01\n!signoff Matitka 19.01 I\'m ill.\n!signoff Bambiqt 11.03-29.03\n!signoff Peanut 23.04-13.05 Away on holiday.')
     async def signoff(self, ctx, *args):
         print(defs.timestamp(), 'signoff', ctx.author, ctx.channel, args)
         if len(args) < 2:
@@ -70,6 +70,11 @@ class Schedule(Cog):
             return
         
         name = args[0].lower()
+
+        raider_names = raiders.getRaiderNames()
+        for raider_name in raider_names:
+            if raider_name.lower() in name:
+                name = raider_name
 
         if not raiders.raiderExists(name):
             await ctx.send('{} is not a raider. Use \'!help {}\' for info on how to use this function.'.format(name, ctx.command.name))
@@ -202,6 +207,8 @@ class Schedule(Cog):
             missed_raids = participants[participant]['missed_raids']
             if any([abs(timestamp - raid) < 24 * 3600 * 1000 for raid in missed_raids]):
                 noshows.append(participant)
+        
+
         
         
 
