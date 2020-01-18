@@ -3,7 +3,7 @@ var signoffs
 function get_signoffs() {
     $.ajax({
         type: "GET",
-        url: "http://127.0.0.1:5000/signofffile",
+        url: "/signofffile",
         contentType: "charset=UTF-16LE",
         success: function(str) {
             signoffs = JSON.parse(str)
@@ -55,7 +55,7 @@ function delete_signoff(i) {
     let message = {type: 'delete', index: i, signoff:signoffs[i]}
 
     $.ajax({
-        url: 'http://127.0.0.1:5000/signofffile',
+        url: '/signofffile',
         type: 'PUT',
         contentType: 'application/json',
         data: JSON.stringify(message),

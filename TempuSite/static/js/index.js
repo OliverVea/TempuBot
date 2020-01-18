@@ -6,7 +6,7 @@ $(document).ready(function() {
 function refresh_data() {
     $.ajax({
         type: "GET",
-        url: "http://127.0.0.1:5000/status",
+        url: "/status",
         contentType: "charset=UTF-16LE",
         success: function(str) {
             json = JSON.parse(str)
