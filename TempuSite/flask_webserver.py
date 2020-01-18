@@ -18,7 +18,7 @@ def parse_bytes(bytes):
 
 app = Flask(__name__)
 
-log_location = os.getenv('TEMPUBOT_LOG_PATH', '') + r'\\'
+log_location = os.getenv('TEMPUBOT_LOG_PATH', '') + '/'
 
 if log_location == '':
     raise FileNotFoundError('TEMPUBOT_LOG_PATH not defined.')
