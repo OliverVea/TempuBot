@@ -3,6 +3,7 @@ from file_handling import JSONFile
 import os
 import json
 import psutil
+import sys
 
 from random import shuffle
 
@@ -18,7 +19,9 @@ def parse_bytes(bytes):
 
 app = Flask(__name__)
 
-log_location = os.getenv('TEMPUBOT_LOG_PATH', '') + '/'
+if len(sys.argv) != 2:
+    raise AttributeError('Should receive only path to json files as argument.')
+log_location = sys.argv[1] + '/'
 
 if log_location == '':
     raise FileNotFoundError('TEMPUBOT_LOG_PATH not defined.')
