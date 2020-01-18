@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block jsimport %}
+<script src="{{ url_for('static', filename='js/signoffs.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+<h1>Sign Offs</h1>
+<table id='table_signoff'>
+    <tr class='header'>
+        <td>Name</td>
+        <td>Start</td>
+        <td>End</td>
+        <td>Reason</td>
+        <td class='delete'> </td>
+    </tr>
+
+</table>
+
+<a onclick='get_signoffs()'>UPDATE</a>
+{% endblock %}

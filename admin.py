@@ -4,6 +4,7 @@ import discord
 import re
 
 import defs
+import logger
 from file_handling import JSONFile
 
 admin_file = JSONFile('admin.json')
@@ -21,6 +22,10 @@ class Admin(Cog):
         
     @Cog.listener()
     async def on_message(self, message):
+        if (isinstance(message.channel, discord.DMChannel)):
+            logger.log_message(message)
+            return
+
         if ('bambi' in message.content.lower() and admin_file.get('reaction_bambi', False)):
             emojis = list(message.guild.emojis)
             for emoji in emojis:
@@ -35,9 +40,10 @@ class Admin(Cog):
                     await message.add_reaction(emoji)
                     return      
 
-    @command(name = 'echo')
+    @command(name = 'echo', help='Echoes your input. Example:\'!echo Echo\'')
     @has_any_role('Officer', 'Admin')
     async def echo(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
         if len(ctx.message.content) == len(ctx.command.name) + 1:
@@ -45,32 +51,31 @@ class Admin(Cog):
             await ctx.send(choice(emojis))
         else:
             await ctx.send(ctx.message.content[len(ctx.command.name) + 2:])
-        print(defs.timestamp(), 'echo', ctx.author, ctx.channel.name, args)
 
-    @command(name = 'announcementchannel')
+    @command(name = 'announcementchannel', help='Sets the announcement channel to the channel this command is sent in.')
     @has_any_role('Admin')
     async def announcementchannel(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: 
             admin_file.set('announcement_channel_id', ctx.message.channel.id)
             await ctx.message.delete()
         except:
             pass    
-        print(defs.timestamp(), 'announcement_channel', ctx.author, ctx.channel.name, args)
 
-    @command(name = 'annend')
+    @command(name = 'annend', help='Sets the ending of all announcements to this message. Example: \'!annend Thank you for listening~\'')
     @has_any_role('Admin')
     async def announementend(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: 
             admin_file.set('announcement_end', ctx.message.content[len(ctx.command.name) + 2:])
             await ctx.message.delete()
         except:
             pass
-        print(defs.timestamp(), 'announcement_channel', ctx.author, ctx.channel.name, args)
 
-    @command(name = 'ann')
+    @command(name = 'ann', help='Makes an announcement in the announcement channel. Example:\'!ann This is an announcement.\'')
     @has_any_role('Officer', 'Admin')
     async def announcement(self, ctx, *args):
-        print(defs.timestamp(), 'ann', ctx.author, ctx.channel.name, args)
+        logger.log_command(ctx, args)
         try: 
             await ctx.message.delete()
             channel_id = admin_file.get('announcement_channel_id')
@@ -84,14 +89,15 @@ class Admin(Cog):
     @command(name='welcome', help='Displays the welcome message.')
     @has_any_role('Officer', 'Admin')
     async def welcome(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
         await ctx.send(admin_file.get('welcome_message'))
-        print(defs.timestamp(), 'welcome', ctx.author, ctx.channel.name, args)
 
     @command(name='setwelcome', help='Sets the welcome message.')
     @has_permissions(administrator=True)
     async def setwelcome(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
 
@@ -99,38 +105,13 @@ class Admin(Cog):
         
         admin_file.set('welcome_message', message)
         await ctx.send('Welcome message set to \'{}\'.'.format(admin_file.get('welcome_message')))
-        print(defs.timestamp(), 'welcome', ctx.author, ctx.channel.name, args)
-
-    @command(name='disable', help='Disables command. Example: \'!disable clear\'')
-    @has_permissions(administrator=True)
-    async def disable(self, ctx, *args):
-        try: await ctx.message.delete()
-        except: pass
-        print(defs.timestamp(), 'disable', ctx.author, ctx.channel.name, args)
-        if (len(args) != 1):
-            await ctx.send('Incorrect amount of arguments received. ({})'.format(len(args)), delete_after=10)
-            return
-            
-        admin_file.set(args[0], False)
-
-    @command(name='enable', help='Enables command that was previously disabled. Example: \'!enable clear\'')
-    @has_permissions(administrator=True)
-    async def enable(self, ctx, *args):
-        try: await ctx.message.delete()
-        except: pass
-        print(defs.timestamp(), 'enable', ctx.author, ctx.channel.name, args)
-        if (len(args) != 1):
-            await ctx.send('Incorrect amount of arguments received. ({})'.format(len(args)), delete_after=10)
-            return      
-            
-        admin_file.set(args[0], True)
 
     @command(name='clear', help='Clears X messages, where X is the argument. Example: \'!clear 50\'')
     @has_permissions(administrator=True)
     async def clear(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
-        print(defs.timestamp(), 'clear', ctx.author, ctx.channel.name, args)
         if (not admin_file.get(ctx.command.name, True)):
             await ctx.send('Command disabled. Enable with \'!enable {}\''.format(ctx.command.name), delete_after=5)
             return
@@ -174,7 +155,7 @@ class Admin(Cog):
     @command(name='clearuntil', help='Clears messages until a message starting with the argument is found. Example: \'!clearuntil Matitka Sucks\'')
     @has_permissions(administrator=True)
     async def clear_until(self, ctx, *args):
-        print(defs.timestamp(), 'clearuntil', ctx.author, ctx.channel.name, args)
+        logger.log_command(ctx, args)
         if (len(args) == 0):
             await ctx.send()
             return 
@@ -188,5 +169,3 @@ class Admin(Cog):
             await ctx.message.channel.delete_messages(messages)
         else:
             await ctx.send('Message \'{}\' not found.'.format(arg), delete_after=10)
-
-        

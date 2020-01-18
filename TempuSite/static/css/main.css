@@ -1,0 +1,95 @@
+body {
+    font-family: 'Courier New', Courier, monospace;
+    margin: 0;
+}
+
+p, h1 {
+
+    margin-top: 0px;
+    margin-bottom: 0px;
+
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+h1 {
+    text-align: center;
+}
+
+table
+{
+  border-collapse:collapse;
+}
+
+table,th,td
+{
+  font-size: small;
+}
+
+td {
+    border:1px solid black;
+    padding-left: 2px;
+    padding-right: 2px;
+    font-stretch: condensed;
+}
+
+.positive {
+    color: #00AA00;
+}
+
+.neutral {
+    color: #CCAA00;
+}
+
+.negative {
+    color: #FF0000;
+}
+
+.header {
+    font-weight: 600;
+    text-align: center;
+}
+
+#content {
+    margin: auto;
+    width: fit-content;
+}
+
+
+
+#navbar {
+    width: 100%; 
+    height: 20px; 
+    border-bottom: 1px solid #999999; 
+    margin: 0px 0px 2px 0px;
+}
+
+.navbar_button {
+    width: fit-content; 
+    height: 100%;
+    border-right: 1px solid #999999;
+    padding-left: 4px;
+    padding-right: 4px;
+    float: left;
+}
+
+.delete {
+    cursor:pointer;
+    border: none;
+}
+
+#statusbox {
+    width: 100%;
+    height: fit-content;
+}
+
+#statusbox_titles {
+    width: 50%;
+    float: left;
+    text-align: right; 
+}
+
+#statusbox_values {
+    width: 50%;
+    margin-left: auto;
+}

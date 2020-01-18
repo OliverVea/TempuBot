@@ -62,10 +62,6 @@ def timestamp():
     return '[' + datetime.now().strftime('%H:%M:%S') + ']'
 
 def get_options(args):
-    args_copy = [arg for arg in args]
-    options = []
-    for arg in args_copy:
-        if arg.startswith('-'):
-            options.append(arg)
-            del args[args.index(arg)]
+    options = [arg for arg in args if arg.startswith('-')]
+    args = [arg for arg in args if not arg.startswith('-')]
     return options

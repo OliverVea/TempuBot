@@ -7,6 +7,7 @@ from discord.ext.commands import Cog, command, has_permissions, has_any_role, dm
 import defs
 import raiders
 import attendance
+import logger
 
 from file_handling import JSONFile
 
@@ -35,6 +36,7 @@ def isNow(dateStart, dateEnd):
     hourNow = now.hour
     minuteNow = now.minute
     dateNow = datetime.datetime(year=1, month=1, day=dayNow, hour=hourNow, minute=minuteNow).strftime('%d-%H:%M:%S')
+    if dateNow < dateStart: dateNow = datetime.datetime(year=1, month=1, day=dayNow + 7, hour=hourNow, minute=minuteNow).strftime('%d-%H:%M:%S')
     return (dateStart <= dateNow <= dateEnd)
 
 def getDateFromtimestamp(timestamp):
@@ -60,11 +62,11 @@ def get_date_from_string(date_str):
 class Schedule(Cog):
     def __init__(self, bot):
         self.bot = bot
-    
+                
     @dm_only()
     @command(name='signoff', help= 'This command allows you to sign off. Date is in the format DD.MM or DD/MM.\nWays to use this command:\n!signoff NAME DATE\n!signoff NAME DATE REASON\n!signoff NAME START-END\n!signoff NAME START-END REASON\n\nExamples:\n!signoff Tempia 12.01\n!signoff Matitka 19.01 I\'m ill.\n!signoff Bambiqt 11.03-29.03\n!signoff Peanut 23.04-13.05 Away on holiday.')
     async def signoff(self, ctx, *args):
-        print(defs.timestamp(), 'signoff', ctx.author, ctx.channel, args)
+        logger.log_command(ctx, args)
         if len(args) < 2:
             await ctx.send('Too few arguments. Use \'!help {}\' for info on how to use this function.'.format(ctx.command.name))
             return
@@ -88,6 +90,11 @@ class Schedule(Cog):
 
         if len(dates_str) == 1:
             date = get_date_from_string(dates_str[0])
+
+            if (date < (datetime.datetime.now() - datetime.timedelta(days=1))):
+                await ctx.send('It is too late to sign off for {}. Use \'!help {}\' for info on how to use this function.'.format(date.strftime('%d/%m'), ctx.command.name))
+                return
+            
             epoch = datetime.datetime(1970, 1, 1)
             diff = date - epoch
             timestamp = int(diff.total_seconds() * 1000)
@@ -98,9 +105,18 @@ class Schedule(Cog):
             ordinal = lambda n: "%d%s" % (n,"tsnrhtdd"[(math.floor(n/10)%10!=1)*(n%10<4)*n%10::4])
             message = '{} signed off for {} the {} of {}.'.format(name.capitalize(), date.strftime('%A'), ordinal(date.day), date.strftime('%B'))
             if (reason != ''): message += ' Reason: "{}"'.format(reason)
+            
         else:
             start = get_date_from_string(dates_str[0])
             end = get_date_from_string(dates_str[1])
+
+            if (end < start):
+                await ctx.send('End \'{}\' is earlier than start \'{}\'. Use \'!help {}\' for info on how to use this function.'.format(end.strftime('%d/%m'), start.strftime('%d/%m'), ctx.command.name))
+                return
+
+            if (end < (datetime.datetime.now() - datetime.timedelta(days=1))):
+                await ctx.send('It it too late to sign off for {}. Use \'!help {}\' for info on how to use this function.'.format(end.strftime('%d/%m'), ctx.command.name))
+                return
 
             if start > end:
                 start.replace(year=start.year - 1)
@@ -125,9 +141,10 @@ class Schedule(Cog):
         channel = self.bot.get_channel(channel_id)
         await channel.send(message)  
 
-    @command(name='setsignoffschannel')
+    @command(name='setsignoffschannel', help='Sets the signoff channel to the message this command is sent in.')
     @has_permissions(administrator=True)
     async def set_signoffs_channel(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
         if (len(args) != 0):
@@ -136,12 +153,12 @@ class Schedule(Cog):
         
         schedule_file.set('signoffs_channel', ctx.message.channel.id)
 
-    @command(name='signoffs')
+    @command(name='signoffs', help='Reports the raiders that have signed off for a given date. Example: \'!signoffs 18.01\'')
     @has_any_role('Officer', 'Admin')
     async def signoffs(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
-        print(defs.timestamp(), 'signoffs', ctx.author, ctx.channel.name, args)
 
         if (len(args) != 1):
             await ctx.send('This command takes a date as an argument.')
@@ -188,12 +205,12 @@ class Schedule(Cog):
 
         await ctx.send(message)
 
-    @command(name='noshows')
+    @command(name='missing', help='Reports which raiders were missing for a given date. Example: \'!missing 12.01\'')
     @has_any_role('Officer', 'Admin')
     async def noshows(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
-        print(defs.timestamp(), 'noshows', ctx.author, ctx.channel.name, args)
 
         participants = attendance.get_participants()
         
@@ -205,19 +222,32 @@ class Schedule(Cog):
 
         for participant in participants:
             missed_raids = participants[participant]['missed_raids']
-            if any([abs(timestamp - raid) < 24 * 3600 * 1000 for raid in missed_raids]):
+            if any(date.date() == datetime.datetime.fromtimestamp(raid / 1000).date() for raid in missed_raids):
                 noshows.append(participant)
         
+        if len(noshows) is 0:
+            await ctx.send('All raiders attended on the {}.'.format(date.strftime('%d/%m')))
+            return
 
-        
-        
+        for signoff in schedule_file.get('signoffs'):
+            if signoff['start'] <= timestamp <= signoff['end'] and signoff['name'].lower().capitalize() in noshows:
+                noshows.remove(signoff['name'].lower().capitalize())
 
-    @command(name='ar')
+        if len(noshows) is 0:
+            await ctx.send('All missing raiders signed off on the {}.'.format(date.strftime('%d/%m')))
+            return
+
+        names = ('**{}** ({}%)'.format(name, round(attendance.get_participant(name)['attendance'] * 100)) for name in noshows)
+
+        message = "Missing raiders for the {}: ".format(date.strftime('%d/%m')) + ', '.join(names)
+        await ctx.send(message)
+        
+    @command(name='ar', help='Adds a raid to the schedule. Example: \'!ar sunday 12.00 sunday 14.30\'')
     @has_permissions(administrator=True)
     async def add_raid(self, ctx, *args):
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
-        print(defs.timestamp(), 'addraid', ctx.author, ctx.channel.name, args)
 
         if len(args) == 4:
             id = ctx.message.channel.id
@@ -225,10 +255,10 @@ class Schedule(Cog):
         else:
             await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
 
-    @command(name = 'rr', help="Removes a raid from the schedule. You select raid by index in \'!listraids\'. Example: \'!removeraid 1\'")
+    @command(name = 'rr', help="Removes a raid from the schedule. You select raid by index in \'!lr\'. Example: \'!rr -1\' would remove the last raid.")
     @has_permissions(administrator=True)
     async def wcl_remove_raid(self, ctx, *args):
-        print(defs.timestamp(), 'removeraid', ctx.author, args)
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
 
@@ -240,10 +270,10 @@ class Schedule(Cog):
         else:
             await ctx.send(content='Incorrect number of arguments. Use \'!help {}\' for help on how to use this feature.'.format(ctx.command.name))
 
-    @command(name = 'lr', help='Lists the raids on the schedule. Example: \'!listraids\'')
+    @command(name = 'lr', help='Lists the raids on the schedule. Example: \'!lr\'')
     @has_any_role('Officer', 'Admin')
     async def wcl_list_raids(self, ctx, *args):
-        print(defs.timestamp(), 'listraids', ctx.author, args)
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
 

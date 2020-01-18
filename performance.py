@@ -2,6 +2,7 @@ import raiders
 import schedule
 import defs
 import ranking_html_factory
+import logger
 
 from file_handling import JSONFile
 from wrapper_warcraftlogs import getReportsGuild, getReportFightCode
@@ -11,7 +12,6 @@ import os
 import discord
 from multiprocessing import Process
 import gc
-
 
 from discord.ext import tasks
 from discord.ext.commands import Cog, command, has_any_role
@@ -177,7 +177,7 @@ class Performance(Cog):
     @command(name = 'forget', help='Removes a specific boss from the list of cleared bosses this week. Example: \'!forget Rag\'')
     @has_any_role('Officer', 'Admin')
     async def forget_boss(self, ctx, *args):
-        print(defs.timestamp(), 'forget', ctx.author, args)
+        logger.log_command(ctx, args)
         try: await ctx.message.delete()
         except: pass
         if len(args) == 0:

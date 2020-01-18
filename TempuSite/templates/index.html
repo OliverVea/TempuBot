@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block jsimport %}
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+    <h1>TempuBot Status</h1>
+    <div id='statusbox'>
+        <div id='statusbox_titles'>
+            <p>Process:</p>
+            <p>Memory Use:</p>
+            <p>Child Procs:</p>
+        </div>
+        <div id='statusbox_values'>
+            <p id="processstatus"></p>
+            <p id="memorystatus">-</p>
+            <p id="childstatus"></p>
+        </div>
+    </div>
+    <div id='log_table_container'>
+        <table id='log_table'> </table>
+    </div>
+{% endblock %}

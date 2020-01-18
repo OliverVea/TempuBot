@@ -13,6 +13,7 @@ import defs
 from wrapper_warcraftlogs import getReportsGuild, getReportFightCode
 import raiders
 from file_handling import JSONFile
+import logger
 
 earliest_next_update = 30 * 60 #Minutes
 last_update = 0
@@ -196,11 +197,11 @@ class Attendance(Cog):
         self.bot = bot
         self.error_messages_lifetime = error_messages_lifetime
 
-    @command(name='attendance')
+    @command(name='attendance', help='Reports the attendance for the raider(s) or class(es). Example:\'!attendance Matitka warriors Mage swiftshot\'')
     @has_any_role('Officer', 'Admin')
     async def cmd_attendance(self, ctx, *args):
+        logger.log_command(ctx, args)
         await ctx.message.delete()
-        print(defs.timestamp(), 'attendance', ctx.author, ctx.channel.name, args)
         args = list(args)
         _ = defs.get_options(args)
 
@@ -233,8 +234,11 @@ class Attendance(Cog):
         
         categories = []
         for arg in args:
-            if (arg in defs.classes) or ((arg[-1] is 's') and (arg[:-1] in defs.classes)):
-                class_raiders = raiders.all_with_attribute('class', arg)
+            print(arg)
+            if (arg.lower()[-1] is 's') and (arg.lower()[:-1] in defs.classes): 
+                arg = arg.lower()[:-1]
+            if arg.lower() in defs.classes:
+                class_raiders = raiders.all_with_attribute('class', arg.lower())
                 class_names = [raider for raider in class_raiders]
                 category = {'type': 'class', 'title': arg.capitalize() + 's', 'attendance': class_names}
             else:
@@ -250,10 +254,10 @@ class Attendance(Cog):
         
         await ctx.send(message)
 
-    @command(name='attendanceplot')
+    @command(name='attendanceplot', help='Plots the attendance of all raiders. Optionally include a timeframe. Example: \'!attendanceplot 40 days\'')
     async def cmd_attendance_plot(self, ctx, *args):
+        logger.log_command(ctx, args)
         await ctx.message.delete()
-        print(defs.timestamp(), 'attendanceplot', ctx.author, ctx.channel.name, args)
         _ = defs.get_options(args)
 
         days = None
