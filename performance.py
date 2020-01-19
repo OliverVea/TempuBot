@@ -74,8 +74,8 @@ def get_new_parses(metrics, new_parses):
     past_start = performance_file.get('start', '')
     bosses = performance_file.get('bosses', [])
 
-    if (report_info['start'] != past_start): 
-        bosses = []
+    if (report_info['start'] < past_start): return
+    if (report_info['start'] > past_start): bosses = []
 
     report = getReportFightCode(report_info['id'])
 
