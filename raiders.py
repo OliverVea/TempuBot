@@ -5,6 +5,7 @@ from discord.ext.commands import Cog, command
 
 from file_handling import JSONFile
 import defs
+import logger
 
 raiders_file = JSONFile('raiders.json')
 
@@ -46,7 +47,6 @@ creds = ServiceAccountCredentials.from_json_keyfile_name(defs.dir_path + '/clien
 client = gspread.authorize(creds)
 
 def update_raiders():
-    print(defs.timestamp(), 'update_raiders_task started')
     sheet = client.open("Hive Mind Officer docs").get_worksheet(3)
     sheet = sheet.get_all_values()
 
@@ -67,9 +67,17 @@ def update_raiders():
     for i, name in enumerate(names):
         raiders[name] = {'class': classes[i], 'role': roles[i], 'rank': ranks[i]}
 
+    prev_raiders = list(raiders_file.read().keys())
     raiders_file.write(raiders)
-    print(defs.timestamp(), 'update_raiders_task finished')
 
+    added = [name for name in names if not name in prev_raiders]
+    removed = [name for name in prev_raiders if not name in names]
+
+    message = 'update_raiders task finished with {} raiders.'.format(len(raiders))
+    if (len(added) > 0): message += ' Added {} members: {}.'.format(len(added), ', '.join(added))
+    if (len(removed) > 0): message += ' Removed {} members: {}.'.format(len(removed), ', '.join(removed))
+
+    logger.log_event('raider_update', message)
 
 class Raiders(Cog):
     def __init__(self, bot):
@@ -79,7 +87,7 @@ class Raiders(Cog):
     def cog_unload(self):
         self.update_raiders_task.cancel()
     
-    @tasks.loop(hours=1)
+    @tasks.loop(minutes=60)
     async def update_raiders_task(self):
         loop = asyncio.get_event_loop()
         loop.run_in_executor(None, update_raiders)

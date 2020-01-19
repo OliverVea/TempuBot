@@ -171,6 +171,7 @@ def plot_fight(f, image_path):
 class Performance(Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.is_now = False
         self.to_plot = []
         self.wclRaidTask.start()
 
@@ -203,15 +204,23 @@ class Performance(Cog):
     async def wclRaidTask(self):
         dates = schedule.schedule_file.get('dates')
         for entry in dates:
-            if (schedule.isNow(entry['start'], entry['end'])):
+            is_now = schedule.isNow(entry['start'], entry['end'])
+
+            if is_now is not self.is_now:
+                if is_now: logger.log_event('raid_task', 'Raid task started.')
+                else: logger.log_event('raid_task', 'Raid task ended.')
+
+            if is_now:
                 await asyncio.wait(fs={loop.run_in_executor(None, get_new_parses, ['dps', 'hps'], self.to_plot)})
+            
+            self.is_now = is_now
 
         while (len(self.to_plot) > 0):     
             f = self.to_plot[0]
             fight = f['fight']
             parses = f['parses']
             report = f['report']
-            
+             
             image_path = defs.dir_path + '/boss_summaries/' + fight['name'] + '.png'
 
             await asyncio.wait(fs={loop.run_in_executor(None, plot_fight, f, image_path)})

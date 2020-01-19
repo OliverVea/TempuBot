@@ -20,14 +20,14 @@ function refresh_data() {
 }
 
 function update_table(status) {
-    
     $('#log_table > tbody').children().not(':first').remove();
 
     status['log'].forEach(entry => {
         let row = '<tr>'
-        ['date', 'time', 'type', 'shorthand'].forEach(key => {
-            row += '<td>' + entry[key] + '</td>'
-        });
+        row += '<td>' + entry.date + '</td>'
+        row += '<td>' + entry.time + '</td>'
+        row += '<td>' + entry.type + '</td>'
+        row += '<td>' + entry.shorthand + '</td>'
         row += '</tr>'
         $('#log_table').append(row)
     });

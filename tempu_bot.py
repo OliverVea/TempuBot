@@ -16,16 +16,18 @@ except AttributeError: print(defs.timestamp(), 'pid could not be identified.')
 try: print(defs.timestamp(), 'os info:', os.uname())
 except AttributeError: print(defs.timestamp(), 'system status could not be found.')
 
-import logger
-logger.log_file.set('pid', str(pid))
-logger.log_file.set('process_name', process_name)
-
 from discord.ext.commands import Bot
 client = Bot('!')
 
 @client.event
 async def on_ready():
     print(defs.timestamp(), 'connected')
+
+import logger
+logger.log_file.set('pid', str(pid))
+logger.log_file.set('process_name', process_name)
+logger.log_event('reboot', 'Rebooted with pid {}.'.format(str(pid)))
+client.add_cog(logger.Logger(client))
 
 import admin
 client.add_cog(admin.Admin(client))

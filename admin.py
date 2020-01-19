@@ -11,9 +11,44 @@ admin_file = JSONFile('admin.json')
 
 admin_file.get('welcome_message', on_error='')
 
+def get_role(rolename, roles):
+    for role in roles:
+        if role.name == rolename:
+            return role
+    return None
+
+async def reaction_change(payload, guild, status):
+    reactions = admin_file.get('reactions', {})
+
+    channel_id = str(payload.channel_id)
+    if channel_id not in reactions:
+        return
+    
+    message_id = str(payload.message_id)
+    if message_id not in reactions[channel_id]:
+        return
+
+    reactions = reactions[channel_id][message_id]
+
+    emoji = str(payload.emoji)
+    for reaction in reactions:
+        if reaction['reaction'] == emoji:
+            role = get_role(reaction['role'], guild.roles)
+
+            member = guild.get_member(payload.user_id)
+
+            if status: 
+                await member.add_roles(role)
+                logger.log_event('addrole', 'added role {} to user {}.'.format(role, member))
+            else: 
+                await member.remove_roles(role)
+                logger.log_event('removerole', 'removed role {} from user {}.'.format(role, member))
+            
+
 class Admin(Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.reaction_dict = {}
 
     @Cog.listener()
     async def on_member_join(self, member):
@@ -170,8 +205,97 @@ class Admin(Cog):
         else:
             await ctx.send('Message \'{}\' not found.'.format(arg), delete_after=10)
         
-    @command(name='reactionmessage')
+    @command(name='clearreactions', help='Clears all role assignments and all reactions from the message. Template: \'!clearreactions MESSAGE_ID\'.')
+    @has_permissions(administrator=True)
+    async def clear_reactions(self, ctx, *args):
+        await ctx.message.delete()
+        logger.log_command(ctx, args)
+
+        message_id, *_ = args
+
+        try: message = await ctx.channel.fetch_message(message_id)
+        except discord.NotFound: 
+            await ctx.send('Message with id \'{}\' not found in this channel. Please use \'!help {}\' for help on how to use this command.'.format(message_id, ctx.command.name))
+            return
+
+        reactions = admin_file.get('reactions', on_error={})
+
+        channel_id = str(ctx.channel.id)
+        if not channel_id in reactions:
+            await ctx.send('This channel has no reaction assignments.')
+            return
+
+        if not message_id in reactions[channel_id]:
+            await ctx.send('This message has no reaction assignments.')
+            return
+
+        await message.clear_reactions()
+        del reactions[channel_id][message_id]
+        if len(reactions[channel_id]) is 0:
+            del reactions[channel_id]
+        admin_file.set('reactions', reactions)
+
+    @command(name='reactionassignment', help='Assigns a specific role to a user depending on the reaction. Template: \'!reactionassignment MESSAGE_ID EMOJI ROLE\'.')
     @has_permissions(administrator=True)
     async def reaction_message(self, ctx, *args):
         await ctx.message.delete()
-        # !reactionmessage 668378089104867329 
+        logger.log_command(ctx, args)
+
+        if len(args) < 3:
+            await ctx.send('Too few arguments. Please use \'!help {}\' for help on how to use this command.'.format(ctx.command.name))
+            return
+
+        message_id, emoji, *args = args
+        rolename = ' '.join(args)
+
+        try: message = await ctx.channel.fetch_message(message_id)
+        except discord.NotFound: 
+            await ctx.send('Message with id \'{}\' not found in this channel. Please use \'!help {}\' for help on how to use this command.'.format(message_id, ctx.command.name))
+            return
+
+        try: await message.add_reaction(emoji)
+        except discord.HTTPException:
+            await ctx.send('Emoji \'{}\' is not valid. Please use \'!help {}\' for help on how to use this command.'.format(emoji, ctx.command.name))
+            return
+
+        roles = ctx.guild.roles
+        role = get_role(rolename, roles)
+
+        if role is None:
+            await ctx.send('Role \'{}\' not found on this server. Please use \'!help {}\' for help on how to use this command.'.format(rolename, ctx.command.name))
+            return
+
+        reactions = admin_file.get('reactions', on_error={})
+
+        channel_id = str(ctx.channel.id)
+        if not channel_id in reactions:
+            reactions[channel_id] = {}
+
+        if not message_id in reactions[channel_id]:
+            reactions[channel_id][message_id] = []
+
+        reaction_list = reactions[channel_id][message_id]
+        reaction_list.append({
+            'reaction': emoji,
+            'role': rolename
+        })
+
+        admin_file.set('reactions', reactions)
+
+    @Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        if (payload.user_id == self.bot.user.id): return
+        guild = self.bot.get_guild(payload.guild_id)
+
+        await reaction_change(payload, guild, True)
+
+    @Cog.listener()
+    async def on_raw_reaction_remove(self, payload):
+        if (payload.user_id == self.bot.user.id): return
+        guild = self.bot.get_guild(payload.guild_id)
+
+        await reaction_change(payload, guild, False)
+
+
+
+        
