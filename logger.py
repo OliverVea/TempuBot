@@ -11,6 +11,7 @@ log_file = file_handling.JSONFile(
 )
 
 def append_entry(entry):
+    print(defs.timestamp(), list(entry.values()))
     log = log_file.get('log')
     log.append(entry)
     log_file.set('log', log)
@@ -31,8 +32,8 @@ def log_command(ctx, args):
         'type': 'command',
         'date': str(datetime.now().strftime('%Y/%m/%d')),
         'time': str(datetime.now().strftime('%H:%M:%S')),
-        'command': str(ctx.command.name), 
         'author': str(ctx.author), 
+        'command': str(ctx.command.name), 
         'channel': str(ctx.channel), 
         'args': str(args), 
         'message': str(ctx.message.content)

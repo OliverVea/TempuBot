@@ -169,3 +169,9 @@ class Admin(Cog):
             await ctx.message.channel.delete_messages(messages)
         else:
             await ctx.send('Message \'{}\' not found.'.format(arg), delete_after=10)
+        
+    @command(name='reactionmessage')
+    @has_permissions(administrator=True)
+    async def reaction_message(self, ctx, *args):
+        await ctx.message.delete()
+        # !reactionmessage 668378089104867329 
