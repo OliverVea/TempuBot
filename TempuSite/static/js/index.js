@@ -20,13 +20,12 @@ function refresh_data() {
 }
 
 function update_table(status) {
-    let headers = ['date', 'time', 'shorthand']
     
-    $('#log_table').html('<tr class=\'header\'><td>Date</td> <td>Time</td> <td>Shorthand</td></tr>')
+    $('#log_table > tbody').children().not(':first').remove();
 
     status['log'].forEach(entry => {
         let row = '<tr>'
-        headers.forEach(key => {
+        ['date', 'time', 'type', 'shorthand'].forEach(key => {
             row += '<td>' + entry[key] + '</td>'
         });
         row += '</tr>'
