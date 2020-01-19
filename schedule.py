@@ -1,6 +1,5 @@
 import math
-import datetime
-from time import time
+from datetime import datetime, date, time, timedelta
 
 from discord.ext.commands import Cog, command, has_permissions, has_any_role, dm_only
 
@@ -22,8 +21,8 @@ def addDate(channelid, dayStart, dayEnd, timeStart, timeEnd):
     hourStart, minuteStart = map(int, timeStart.split('.'))
     hourEnd, minuteEnd = map(int, timeEnd.split('.'))
 
-    startDate = datetime.datetime(year=1, month=1, day=dayStart, hour=hourStart, minute=minuteStart)
-    endDate = datetime.datetime(year=1, month=1, day=dayEnd, hour=hourEnd, minute=minuteEnd)
+    startDate = datetime(year=1, month=1, day=dayStart, hour=hourStart, minute=minuteStart)
+    endDate = datetime(year=1, month=1, day=dayEnd, hour=hourEnd, minute=minuteEnd)
 
     entry = {'id': channelid, 'start': startDate.strftime('%d-%H:%M:%S'), 'end': endDate.strftime('%d-%H:%M:%S')}
     dates = schedule_file.get('dates')
@@ -31,16 +30,16 @@ def addDate(channelid, dayStart, dayEnd, timeStart, timeEnd):
     schedule_file.set('dates', dates)
 
 def isNow(dateStart, dateEnd):
-    now = datetime.datetime.now()
+    now = datetime.now()
     dayNow = now.weekday() + 1
     hourNow = now.hour
     minuteNow = now.minute
-    dateNow = datetime.datetime(year=1, month=1, day=dayNow, hour=hourNow, minute=minuteNow).strftime('%d-%H:%M:%S')
-    if dateNow < dateStart: dateNow = datetime.datetime(year=1, month=1, day=dayNow + 7, hour=hourNow, minute=minuteNow).strftime('%d-%H:%M:%S')
+    dateNow = datetime(year=1, month=1, day=dayNow, hour=hourNow, minute=minuteNow).strftime('%d-%H:%M:%S')
+    if dateNow < dateStart: dateNow = datetime(year=1, month=1, day=dayNow + 7, hour=hourNow, minute=minuteNow).strftime('%d-%H:%M:%S')
     return (dateStart <= dateNow <= dateEnd)
 
 def getDateFromtimestamp(timestamp):
-    date = datetime.datetime.utcfromtimestamp(timestamp/1000)
+    date = datetime.utcfromtimestamp(timestamp/1000)
     dateString = date.strftime('%d/%m/%Y')
     return dateString
 
@@ -53,9 +52,9 @@ def get_date_from_string(date_str):
             dates = date_str.split(delim)
     if not assigned or len(dates) > 2:
         raise TypeError(date_str)
-    year = datetime.datetime.now().year
-    date = datetime.datetime(year, int(dates[1]), int(dates[0]))
-    if date < datetime.datetime.now():
+    year = datetime.now().year
+    date = datetime(year, int(dates[1]), int(dates[0]))
+    if date < datetime.now():
         date.replace(year=year + 1)
     return date
 
@@ -91,11 +90,11 @@ class Schedule(Cog):
         if len(dates_str) == 1:
             date = get_date_from_string(dates_str[0])
 
-            if (date < (datetime.datetime.now() - datetime.timedelta(days=1))):
+            if (date < (datetime.now() - timedelta(days=1))):
                 await ctx.send('It is too late to sign off for {}. Use \'!help {}\' for info on how to use this function.'.format(date.strftime('%d/%m'), ctx.command.name))
                 return
             
-            epoch = datetime.datetime(1970, 1, 1)
+            epoch = datetime(1970, 1, 1)
             diff = date - epoch
             timestamp = int(diff.total_seconds() * 1000)
 
@@ -114,14 +113,14 @@ class Schedule(Cog):
                 await ctx.send('End \'{}\' is earlier than start \'{}\'. Use \'!help {}\' for info on how to use this function.'.format(end.strftime('%d/%m'), start.strftime('%d/%m'), ctx.command.name))
                 return
 
-            if (end < (datetime.datetime.now() - datetime.timedelta(days=1))):
+            if (end < (datetime.now() - timedelta(days=1))):
                 await ctx.send('It it too late to sign off for {}. Use \'!help {}\' for info on how to use this function.'.format(end.strftime('%d/%m'), ctx.command.name))
                 return
 
             if start > end:
                 start.replace(year=start.year - 1)
 
-            epoch = datetime.datetime(1970, 1, 1)
+            epoch = datetime(1970, 1, 1)
             ts_start = int((start - epoch).total_seconds() * 1000)
             ts_end = int((end - epoch).total_seconds() * 1000)
 
@@ -160,48 +159,37 @@ class Schedule(Cog):
         try: await ctx.message.delete()
         except: pass
 
-        if (len(args) != 1):
-            await ctx.send('This command takes a date as an argument.')
+        if len(args) is 1: query_date = get_date_from_string(args[0])
+        elif len(args) is 0: query_date = datetime.combine(date.today(), time())
+        else:
+            await ctx.send('This command takes at most one argument: the date. Use \'!help {}\' for help on how to use this command.'.format(ctx.command.name))
             return
 
-        date = get_date_from_string(args[0])
-        epoch = datetime.datetime(1970, 1, 1)
-        timestamp = int((date - epoch).total_seconds() * 1000)
+        epoch = datetime(1970, 1, 1)
+        timestamp = int((query_date - epoch).total_seconds() * 1000)
 
         signoffs = schedule_file.get('signoffs')
-        sos_copy = [signoff for signoff in signoffs]
 
-        names = []
-
-        for signoff in sos_copy:
-            if signoff['start'] <= timestamp <= signoff['end']:
-                names.append(signoff['name'].lower().capitalize())
+        names = [so['name'].lower().capitalize() for so in signoffs if so['start'] <= timestamp <= so['end']]
         
         message = 'Sign offs: ' + ', '.join(names) + '\n'
         
         roles_so = {}
-        signed_off = 0
-
         for name in names:
             role = raiders.getRaiderAttribute(name, 'role')
-            if role in roles_so: roles_so[role] += 1
-            else: roles_so[role] = 1
-            signed_off += 1
+            roles_so[role] = roles_so.get(role, 0) + 1
 
         all_raiders = raiders.getRaiders()
         roles_at = {}
-        attending = 0
-        
         for raider in all_raiders:
             if not raider.capitalize() in names:
-                if all_raiders[raider]['role'] in roles_at: roles_at[all_raiders[raider]['role']] += 1
-                else: roles_at[all_raiders[raider]['role']] = 1
-                attending += 1
+                role = all_raiders[raider]['role']
+                roles_at[role] = roles_at.get(role, 0) + 1
 
         roles = ['{}: {}'.format(role.capitalize(), roles_so[role]) for role in roles_so]
-        message += 'Signed off ({}): '.format(signed_off) + ', '.join(roles) + '\n'
+        message += 'Signed off ({}): '.format(sum(roles_so.values())) + ', '.join(roles) + '\n'
         roles = ['{}: {}'.format(role.capitalize(), roles_at[role]) for role in roles_at]
-        message += 'Attending ({}): '.format(attending) + ', '.join(roles)
+        message += 'Attending ({}): '.format(sum(roles_at.values())) + ', '.join(roles)
 
         await ctx.send(message)
 
@@ -214,19 +202,22 @@ class Schedule(Cog):
 
         participants = attendance.get_participants()
         
-        date = get_date_from_string(args[0])
-        epoch = datetime.datetime(1970, 1, 1)
-        timestamp = int((date - epoch).total_seconds() * 1000)
+        if (len(args) is 1): query_date = get_date_from_string(args[0])
+        else: query_date = datetime.combine(date.today(), time())
+            
+        epoch = datetime(1970, 1, 1)
+        timestamp = int((query_date - epoch).total_seconds() * 1000)
 
         noshows = []
 
         for participant in participants:
             missed_raids = participants[participant]['missed_raids']
-            if any(date.date() == datetime.datetime.fromtimestamp(raid / 1000).date() for raid in missed_raids):
+            missed_dates = [date.fromtimestamp(raid / 1000) for raid in missed_raids]
+            if query_date.date() in missed_dates:
                 noshows.append(participant)
         
         if len(noshows) is 0:
-            await ctx.send('All raiders attended on the {}.'.format(date.strftime('%d/%m')))
+            await ctx.send('All raiders attended on the {}.'.format(query_date.strftime('%d/%m')))
             return
 
         for signoff in schedule_file.get('signoffs'):
@@ -234,12 +225,12 @@ class Schedule(Cog):
                 noshows.remove(signoff['name'].lower().capitalize())
 
         if len(noshows) is 0:
-            await ctx.send('All missing raiders signed off on the {}.'.format(date.strftime('%d/%m')))
+            await ctx.send('All missing raiders signed off on the {}.'.format(query_date.strftime('%d/%m')))
             return
 
         names = ('**{}** ({}%)'.format(name, round(attendance.get_participant(name)['attendance'] * 100)) for name in noshows)
 
-        message = "Missing raiders for the {}: ".format(date.strftime('%d/%m')) + ', '.join(names)
+        message = "Missing raiders for the {}: {}".format(query_date.strftime('%d/%m'), ', '.join(names))
         await ctx.send(message)
         
     @command(name='ar', help='Adds a raid to the schedule. Example: \'!ar sunday 12.00 sunday 14.30\'')
