@@ -5,7 +5,6 @@ from discord.ext.commands import Cog, command, has_permissions, has_any_role, dm
 
 import defs
 import raiders
-import attendance
 import logger
 
 from file_handling import JSONFile
@@ -191,46 +190,6 @@ class Schedule(Cog):
         roles = ['{}: {}'.format(role.capitalize(), roles_at[role]) for role in roles_at]
         message += 'Attending ({}): '.format(sum(roles_at.values())) + ', '.join(roles)
 
-        await ctx.send(message)
-
-    @command(name='missing', help='Reports which raiders were missing for a given date. Example: \'!missing 12.01\'')
-    @has_any_role('Officer', 'Admin')
-    async def noshows(self, ctx, *args):
-        logger.log_command(ctx, args)
-        try: await ctx.message.delete()
-        except: pass
-
-        participants = attendance.get_participants()
-        
-        if (len(args) is 1): query_date = get_date_from_string(args[0])
-        else: query_date = datetime.combine(date.today(), time())
-            
-        epoch = datetime(1970, 1, 1)
-        timestamp = int((query_date - epoch).total_seconds() * 1000)
-
-        noshows = []
-
-        for participant in participants:
-            missed_raids = participants[participant]['missed_raids']
-            missed_dates = [date.fromtimestamp(raid / 1000) for raid in missed_raids]
-            if query_date.date() in missed_dates:
-                noshows.append(participant)
-        
-        if len(noshows) is 0:
-            await ctx.send('All raiders attended on the {}.'.format(query_date.strftime('%d/%m')))
-            return
-
-        for signoff in schedule_file.get('signoffs'):
-            if signoff['start'] <= timestamp <= signoff['end'] and signoff['name'].lower().capitalize() in noshows:
-                noshows.remove(signoff['name'].lower().capitalize())
-
-        if len(noshows) is 0:
-            await ctx.send('All missing raiders signed off on the {}.'.format(query_date.strftime('%d/%m')))
-            return
-
-        names = ('**{}** ({}%)'.format(name, round(attendance.get_participant(name)['attendance'] * 100)) for name in noshows)
-
-        message = "Missing raiders for the {}: {}".format(query_date.strftime('%d/%m'), ', '.join(names))
         await ctx.send(message)
         
     @command(name='ar', help='Adds a raid to the schedule. Example: \'!ar sunday 12.00 sunday 14.30\'')

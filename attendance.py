@@ -1,7 +1,9 @@
-from time import time
+from time import time as time_now
 import json
 import os
 import numpy as np
+from contextlib import suppress
+from datetime import datetime, date, time
 import matplotlib.pyplot as plt
 plt.style.use('discord')
 
@@ -12,10 +14,11 @@ from discord.ext.commands import Cog, command, has_permissions, has_any_role
 import defs
 from wrapper_warcraftlogs import getReportsGuild, getReportFightCode
 import raiders
+import schedule
 from file_handling import JSONFile
 import logger
 
-earliest_next_update = 30 * 60 #Minutes
+earliest_next_update = 2 * 60
 last_update = 0
 
 attendance_file = JSONFile('attendance.json')
@@ -26,10 +29,10 @@ def get_query_start(days, months):
         raise ValueError('Both days and months set.')
     elif days != None:
         if not isinstance(days, (int, float)): raise TypeError('days is not a number.')
-        else: query_start = int(time() * 1000 - float(days) * 24 * 60 * 60 * 1000)
+        else: query_start = int(time_now() * 1000 - float(days) * 24 * 60 * 60 * 1000)
     elif months != None:
         if not isinstance(months, (int, float)): raise TypeError('months is not a number.')
-        else: query_start = int(time() * 1000 - float(months) * 31 * 24 * 60 * 60 * 1000)
+        else: query_start = int(time_now() * 1000 - float(months) * 31 * 24 * 60 * 60 * 1000)
     return query_start
 
 def get_raids(guild = 'Hive Mind', days = None, months = None):
@@ -49,10 +52,15 @@ def get_attendance(guild='Hive Mind', update_attendance = True, days = None, mon
         attendance[guild] = {}
         last_update = 0
 
-    if update_attendance and last_update + earliest_next_update < time():
-        last_update = time()
+    if update_attendance and last_update + earliest_next_update < time_now():
+        last_update = time_now()
         raids = get_raids(guild, days, months)
         raids = filter_raids(raids)
+
+        for raid in list(attendance[guild].keys()): 
+            if not raid in [r['id'] for r in raids]: 
+                del attendance[guild][raid]
+
         for raid in raids:
             if raid['id'] not in attendance[guild]:
                 print(defs.timestamp(), 'Adding raid (' + raid['id'] + ') to the attendance file.') 
@@ -65,7 +73,8 @@ def get_attendance(guild='Hive Mind', update_attendance = True, days = None, mon
                 attendance[guild][raid['id']] = raid_entry
             attendance_file.write(attendance)
 
-    
+    if days != None or months != None: last_update = 0
+
     start = get_query_start(days, months)
     filtered_attendance = [attendance[guild][raid_id] for raid_id in attendance[guild] if attendance[guild][raid_id]['start'] > start]
 
@@ -116,7 +125,7 @@ def get_participant(name, guild = 'Hive Mind', update_attendance=True, days = No
         participant['attendance'] = len(participant['raids']) / (len(participant['raids']) + len(participant['missed_raids']))
     
     else: 
-        participant['first_raid'] = time() * 1000
+        participant['first_raid'] = time_now() * 1000
         participant['attendance'] = 0
 
     return participant
@@ -286,3 +295,42 @@ class Attendance(Cog):
         make_attendance_plot(participants, 'attendance_plot.png')
         await ctx.send(content="Attendance plot: ", file=discord.File(defs.dir_path + '/attendance_plot.png'))
         os.remove(defs.dir_path + '/attendance_plot.png')
+
+    @command(name='missing', help='Reports which raiders were missing for a given date. Example: \'!missing 12.01\'')
+    @has_any_role('Officer', 'Admin')
+    async def noshows(self, ctx, *args):
+        logger.log_command(ctx, args)
+        with suppress(): await ctx.message.delete()
+
+        participants = get_participants()
+        
+        if (len(args) is 1): query_date = schedule.get_date_from_string(args[0])
+        else: query_date = datetime.combine(date.today(), time())
+            
+        epoch = datetime(1970, 1, 1)
+        timestamp = int((query_date - epoch).total_seconds() * 1000)
+
+        noshows = []
+
+        for participant in participants:
+            missed_raids = participants[participant]['missed_raids']
+            missed_dates = [date.fromtimestamp(raid / 1000) for raid in missed_raids]
+            if query_date.date() in missed_dates:
+                noshows.append(participant)
+        
+        if len(noshows) is 0:
+            await ctx.send('All raiders attended on the {}.'.format(query_date.strftime('%d/%m')))
+            return
+
+        for signoff in schedule.schedule_file.get('signoffs'):
+            if signoff['start'] <= timestamp <= signoff['end'] and signoff['name'].lower().capitalize() in noshows:
+                noshows.remove(signoff['name'].lower().capitalize())
+
+        if len(noshows) is 0:
+            await ctx.send('All missing raiders signed off on the {}.'.format(query_date.strftime('%d/%m')))
+            return
+
+        names = ('**{}** ({}%)'.format(name, round(get_participant(name)['attendance'] * 100)) for name in noshows)
+
+        message = "Missing raiders for the {}: {}".format(query_date.strftime('%d/%m'), ', '.join(names))
+        await ctx.send(message)

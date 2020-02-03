@@ -2,6 +2,7 @@ from discord.ext.commands import Cog, command, has_permissions, has_any_role
 from random import choice
 import discord
 import re
+from contextlib import suppress
 
 import defs
 import logger
@@ -79,8 +80,8 @@ class Admin(Cog):
     @has_any_role('Officer', 'Admin')
     async def echo(self, ctx, *args):
         logger.log_command(ctx, args)
-        try: await ctx.message.delete()
-        except: pass
+        with suppress(): await ctx.message.delete()
+
         if len(ctx.message.content) == len(ctx.command.name) + 1:
             emojis = list(ctx.message.guild.emojis)
             await ctx.send(choice(emojis))
@@ -91,50 +92,40 @@ class Admin(Cog):
     @has_any_role('Admin')
     async def announcementchannel(self, ctx, *args):
         logger.log_command(ctx, args)
-        try: 
-            admin_file.set('announcement_channel_id', ctx.message.channel.id)
-            await ctx.message.delete()
-        except:
-            pass    
+        with suppress(): await ctx.message.delete()
+        admin_file.set('announcement_channel_id', ctx.message.channel.id)
 
     @command(name = 'annend', help='Sets the ending of all announcements to this message. Example: \'!annend Thank you for listening~\'')
     @has_any_role('Admin')
     async def announementend(self, ctx, *args):
         logger.log_command(ctx, args)
-        try: 
-            admin_file.set('announcement_end', ctx.message.content[len(ctx.command.name) + 2:])
-            await ctx.message.delete()
-        except:
-            pass
+        with suppress(): await ctx.message.delete()
+        admin_file.set('announcement_end', ctx.message.content[len(ctx.command.name) + 2:])
 
     @command(name = 'ann', help='Makes an announcement in the announcement channel. Example:\'!ann This is an announcement.\'')
     @has_any_role('Officer', 'Admin')
     async def announcement(self, ctx, *args):
         logger.log_command(ctx, args)
-        try: 
+        with suppress():
             await ctx.message.delete()
             channel_id = admin_file.get('announcement_channel_id')
             channel = self.bot.get_channel(channel_id)
             message = ctx.message.content[len(ctx.command.name) + 2:] + '\n'
             message += admin_file.get('announcement_end', on_error='')
             await channel.send(message)
-        except: 
-            pass
 
     @command(name='welcome', help='Displays the welcome message.')
     @has_any_role('Officer', 'Admin')
     async def welcome(self, ctx, *args):
         logger.log_command(ctx, args)
-        try: await ctx.message.delete()
-        except: pass
+        with suppress(): await ctx.message.delete()
         await ctx.send(admin_file.get('welcome_message'))
 
     @command(name='setwelcome', help='Sets the welcome message.')
     @has_permissions(administrator=True)
     async def setwelcome(self, ctx, *args):
         logger.log_command(ctx, args)
-        try: await ctx.message.delete()
-        except: pass
+        with suppress(): await ctx.message.delete()
 
         message = ' '.join(args)
         
@@ -145,8 +136,7 @@ class Admin(Cog):
     @has_permissions(administrator=True)
     async def clear(self, ctx, *args):
         logger.log_command(ctx, args)
-        try: await ctx.message.delete()
-        except: pass
+        with suppress(): await ctx.message.delete()
         if (not admin_file.get(ctx.command.name, True)):
             await ctx.send('Command disabled. Enable with \'!enable {}\''.format(ctx.command.name), delete_after=5)
             return
