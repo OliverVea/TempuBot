@@ -2,38 +2,74 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 import defs
+from file_handling import JSONFile
+import logger
 
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name(defs.dir_path + '/client_secret.json', scope)
 client = gspread.authorize(creds)
 
-headers = ['Name', 'Class', 'Role']
+headers = ['name', 'class', 'role']
+
+raiders_file = JSONFile('raiders.json')
 
 def read_sheet():
-    sheet = client.open("Hive Mind Officer docs").worksheet('Assessment Sheet')
-    sheet = sheet.get_all_values()
+    sheet = client.open("Hive Mind Giga-Sheet").worksheet('Assessment Sheet')
+    sheet_values = sheet.get_all_values()
 
-    header_row = -1
-
-    for i, row in sorted(enumerate(sheet), reverse=True):
+    del_rows = []
+    for i, row in sorted(enumerate(sheet_values), reverse=True):
         if all([cell == '' for cell in row]):
-            del sheet[i]
+            del sheet_values[i]
+            del_rows.append(i)
+     
+    sheet_values = [[cell.strip().lower() for cell in row] for row in sheet_values]
 
-    for i in sorted(range(0, len(sheet[0])), reverse=True):
-        if all([row[i] == '' for row in sheet]):
-            for j in range(0, len(sheet)):
-                del sheet[j][i]
-
-    for i, row in enumerate(sheet):
-        if set(headers) <= set(row):
-            header_row = i
-            break
+    header_row = -1 
+    i = 0
+    while (header_row is -1) and (i < len(sheet_values)):
+        if set(headers) <= set(sheet_values[i]): header_row = i
+        i = i + 1
 
     if header_row is -1: return
 
+    del_cols = []
+    for i in sorted(range(0, len(sheet_values[0])), reverse=True):
+        if sheet_values[header_row][i] is '':
+            for j in range(0, len(sheet_values)):
+                del sheet_values[j][i]
+            del_cols.append(i)
+                
+    raiders = {}
+    offset = 0
+    for i, row in enumerate(sheet_values[1:]):
+        while (i + offset in del_rows or i + offset is 1): offset += 1 
+        
+        cells = {sheet_values[header_row][j]:row[j] for j in range(0, len(row))}
 
+        raider =  {}
+        raider['row'] = i + offset # 1-indexed
+        raider['class'] = cells['class']
+        raider['role'] = cells['role']
+        raider['team'] = cells['team assign.']
+        raider['attendance'] = cells['attendance']
 
-    pass
+        raider['performance'] = {key:cells[key] for key in ['bwl', 'mc', 'ony']}
+
+        raiders[cells['name']] = raider
+
+    prev_raiders = list(raiders_file.read().keys())
+    raiders_file.write(raiders)
+
+    added = [name for name in raiders.keys() if not name in prev_raiders]
+    removed = [name for name in prev_raiders if not name in raiders.keys()]
+
+    message = 'update_raiders task finished with {} raiders.'.format(len(raiders))
+    if (len(added) > 0): message += ' Added {} members: {}.'.format(len(added), ', '.join(added))
+    if (len(removed) > 0): message += ' Removed {} members: {}.'.format(len(removed), ', '.join(removed))
+
+    logger.log_event('raider_update', message)
+
 
 read_sheet()

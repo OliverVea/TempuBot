@@ -24,8 +24,7 @@ async def on_ready():
     print(defs.timestamp(), 'connected')
 
 import logger
-logger.log_file.set('pid', str(pid))
-logger.log_file.set('process_name', process_name)
+logger.set_info(pid, process_name)
 logger.log_event('reboot', 'Rebooted with pid {}.'.format(str(pid)))
 client.add_cog(logger.Logger(client))
 

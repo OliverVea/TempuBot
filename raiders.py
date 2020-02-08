@@ -14,10 +14,10 @@ def getRaiderAttribute(name, attribute):
     raiders = getRaiders()
     if name not in raiders: return None
     raider = raiders[name]
-    return raider[attribute]
+    return raider.setdefault(attribute, None)
 
 def getRaiders():
-    raiders = raiders_file.read()
+    raiders = raiders_file.get('raiders', {})
     return raiders
 
 def getRaiderNames():
@@ -41,37 +41,66 @@ def all_with_attribute(attribute, value):
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-scope = ['https://spreadsheets.google.com/feeds',
-         'https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name(defs.dir_path + '/client_secret.json', scope)
-client = gspread.authorize(creds)
-
 def update_raiders():
-    sheet = client.open("Hive Mind Officer docs").get_worksheet(3)
-    sheet = sheet.get_all_values()
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name(defs.dir_path + '/client_secret.json', scope)
+    client = gspread.authorize(creds)
+    sheet = client.open("Hive Mind Giga-Sheet").worksheet('Assessment Sheet')
+    sheet_values = sheet.get_all_values()
 
-    header_row = [cell.strip().lower() for cell in sheet[2]]
+    del_rows = []
+    for i, row in sorted(enumerate(sheet_values), reverse=True):
+        if all([cell == '' for cell in row]):
+            del sheet_values[i]
+            del_rows.append(i)
+     
+    sheet_values = [[cell.strip().lower() for cell in row] for row in sheet_values]
 
-    col_name = header_row.index('name')
-    col_class = header_row.index('class')
-    col_role = header_row.index('role')
-    col_rank = header_row.index('rank')
+    header_row = -1 
+    i = 0
+    while (header_row is -1) and (i < len(sheet_values)):
+        if set(['name', 'class', 'role']) <= set(sheet_values[i]): header_row = i
+        i = i + 1
 
-    names = [row[col_name].strip().lower() for row in sheet[3:] if row[col_name] != '']
-    classes = [row[col_class].strip().lower() for row in sheet[3:] if row[col_name] != '']
-    roles = [row[col_role].strip().lower() for row in sheet[3:] if row[col_name] != '']
-    ranks = [row[col_rank].strip().lower() for row in sheet[3:] if row[col_name] != '']
+    if header_row is -1: return
+
+    del_cols = []
+    for i in sorted(range(0, len(sheet_values[0])), reverse=True):
+        if sheet_values[header_row][i] is '':
+            for j in range(0, len(sheet_values)):
+                del sheet_values[j][i]
+            del_cols.append(i)
+    
+    category_col = {}
+    offset = 0
+    for i, cell in enumerate(sheet_values[header_row]):
+        while (i + offset in del_cols): offset += 1
+        category_col[cell] = i + offset + 1
+    raiders_file.set('category_col', category_col)
 
     raiders = {}
+    offset = 0
+    for i, row in enumerate(sheet_values[1:]):
+        while (i + offset in del_rows or i + offset is 1): offset += 1 
+        
+        cells = {sheet_values[header_row][j]:row[j] for j in range(0, len(row))}
 
-    for i, name in enumerate(names):
-        raiders[name] = {'class': classes[i], 'role': roles[i], 'rank': ranks[i]}
+        raider =  {}
+        raider['row'] = i + offset + 1 # 1-indexed
+        raider['class'] = cells['class']
+        raider['role'] = cells['role']
+        raider['team'] = cells['team']
+        raider['attendance'] = cells['attendance']
 
-    prev_raiders = list(raiders_file.read().keys())
-    raiders_file.write(raiders)
+        raider['performance'] = {key:cells[key] for key in ['bwl', 'mc', 'ony']}
 
-    added = [name for name in names if not name in prev_raiders]
-    removed = [name for name in prev_raiders if not name in names]
+        raiders[cells['name']] = raider
+
+    prev_raiders = list(raiders_file.get('raiders', on_error={}).keys())
+    raiders_file.set('raiders', raiders)
+
+    added = [name for name in raiders.keys() if not name in prev_raiders]
+    removed = [name for name in prev_raiders if not name in raiders.keys()]
 
     message = 'update_raiders task finished with {} raiders.'.format(len(raiders))
     if (len(added) > 0): message += ' Added {} members: {}.'.format(len(added), ', '.join(added))
@@ -79,15 +108,20 @@ def update_raiders():
 
     logger.log_event('raider_update', message)
 
+def get_col(col_name):
+    category_col = raiders_file.get('category_col', {})
+    if col_name in category_col: return category_col[col_name]
+    return None
+
 class Raiders(Cog):
+    @tasks.loop(minutes=15)
+    async def update_raiders_task(self):
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, update_raiders)
+
     def __init__(self, bot):
         self.bot = bot
         self.update_raiders_task.start()
 
     def cog_unload(self):
         self.update_raiders_task.cancel()
-    
-    @tasks.loop(minutes=60)
-    async def update_raiders_task(self):
-        loop = asyncio.get_event_loop()
-        loop.run_in_executor(None, update_raiders)

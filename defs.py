@@ -64,4 +64,4 @@ def timestamp():
 def get_options(args):
     options = [arg for arg in args if arg.startswith('-')]
     args = [arg for arg in args if not arg.startswith('-')]
-    return options
+    return options, args

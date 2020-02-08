@@ -127,7 +127,7 @@ class Admin(Cog):
         logger.log_command(ctx, args)
         with suppress(): await ctx.message.delete()
 
-        message = ' '.join(args)
+        message = ctx.message.content[len(ctx.command.name) + 2:]
         
         admin_file.set('welcome_message', message)
         await ctx.send('Welcome message set to \'{}\'.'.format(admin_file.get('welcome_message')))
@@ -285,7 +285,3 @@ class Admin(Cog):
         guild = self.bot.get_guild(payload.guild_id)
 
         await reaction_change(payload, guild, False)
-
-
-
-        

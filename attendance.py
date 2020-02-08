@@ -18,6 +18,10 @@ import schedule
 from file_handling import JSONFile
 import logger
 
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from gspread.models import Cell
+
 earliest_next_update = 2 * 60
 last_update = 0
 
@@ -38,97 +42,119 @@ def get_query_start(days, months):
 def get_raids(guild = 'Hive Mind', days = None, months = None):
     return getReportsGuild(guild, queryStart=get_query_start(days, months))
 
-def filter_raids(raids):
-    filtered = [raid for raid in raids if not any([_raid['start'] < raid['start'] <= _raid['end'] for _raid in raids])]
-    filtered = [raid for raid in filtered if not raid['title'].startswith('_')]
-
-    return filtered
-
-def get_attendance(guild='Hive Mind', update_attendance = True, days = None, months = None):
+def get_attendance(update_attendance = True, days = None, months = None):
     global last_update, earliest_next_update
-    attendance = attendance_file.read()
-
-    if guild not in attendance:
-        attendance[guild] = {}
-        last_update = 0
+    reports_file = attendance_file.read()
 
     if update_attendance and last_update + earliest_next_update < time_now():
         last_update = time_now()
-        raids = get_raids(guild, days, months)
-        raids = filter_raids(raids)
+        reports = get_raids(days=days, months=months)
 
-        for raid in list(attendance[guild].keys()): 
-            if not raid in [r['id'] for r in raids]: 
-                del attendance[guild][raid]
+        for report_info in reports:
+            report_info['exclude'] = report_info['title'].startswith('_')
 
-        for raid in raids:
-            if raid['id'] not in attendance[guild]:
-                print(defs.timestamp(), 'Adding raid (' + raid['id'] + ') to the attendance file.') 
-                report = getReportFightCode(raid['id'])
+            if '[MC]' in report_info['title']: report_info.setdefault('raids', []).append('MC')
+            if '[BWL]' in report_info['title']: report_info.setdefault('raids', []).append('BWL')
+            if '[ONY]' in report_info['title']: report_info.setdefault('raids', []).append('ONY')
 
-                participants = [participant['name'] for participant in report['exportedCharacters']]
+            if '[R]' in report_info['title']: report_info['team'] = 'team red'
+            elif '[B]' in report_info['title']: report_info['team'] = 'team blue'
+            
+            if not 'raids' in report_info or not 'team' in report_info: report_info['exclude'] = True
+        
+        reports = [report_info for report_info in reports if not report_info['exclude']]
 
-                raid_entry = {'start': raid['start'], 'title': raid['title'], 'participants': participants}
+        for raid in list(reports_file.keys()): 
+            if not raid in [report_info['id'] for report_info in reports]: 
+                del reports_file[raid]
 
-                attendance[guild][raid['id']] = raid_entry
-            attendance_file.write(attendance)
+        for report_info in reports:
+            if report_info['id'] not in reports_file:
+                print(defs.timestamp(), 'Adding raid (' + report_info['id'] + ') to the attendance file.') 
+                report = getReportFightCode(report_info['id'])
+
+                participants = [participant['name'].strip().lower() for participant in report['exportedCharacters']]
+
+                raid_entry = {'start': report_info['start'], 'title': report['title'], 'participants': participants, 'team': report_info['team'], 'raids': report_info['raids']}
+
+                reports_file[report_info['id']] = raid_entry
+            attendance_file.write(reports_file)
 
     if days != None or months != None: last_update = 0
 
     start = get_query_start(days, months)
-    filtered_attendance = [attendance[guild][raid_id] for raid_id in attendance[guild] if attendance[guild][raid_id]['start'] > start]
+    filtered_attendance = [reports_file[raid_id] for raid_id in reports_file if reports_file[raid_id]['start'] > start]
 
     return filtered_attendance
 
-def get_participants(guild = 'Hive Mind', update_attendance=True, days = None, months = None):
-    attendance = get_attendance(guild, update_attendance, days, months)
+def get_participants(update_attendance=True, days = None, months = None):
+    attendance = get_attendance(update_attendance, days, months)
     participants = {}
 
     # Count attendance
-    for raid in attendance:
-        for participant in raid['participants']:
-            if (raiders.raiderExists(participant)):
-                if not participant in participants:
-                    participants[participant] = {'raids':[]}
-                participants[participant]['raids'].append(raid['start'])
+    for report in attendance:
+        for participant in report['participants']:
+            team = raiders.getRaiderAttribute(participant, 'team')
+            if team == report['team']:
+                participants.setdefault(participant, {})
+                for raidname in report['raids']:
+                    participants[participant].setdefault(raidname, {'raids':[]})
+                    participants[participant][raidname]['raids'].append(report['start'])
     
     for name in participants:
-        participants[name]['first_raid'] = min(participants[name]['raids'])   
+        for raid in participants[name]:
+            participants[name][raid]['first_raid'] = min(participants[name][raid]['raids'])   
 
     # Count absence
     for name in participants:
-        missed_raids = []
-        for raid in attendance:
-            start = raid['start']
-            if not start in participants[name]['raids']:
-                if start > participants[name]['first_raid']:
-                    missed_raids.append(start)
-        participants[name]['missed_raids'] = missed_raids
+        for raid_name in participants[name]:
+            missed_raids = []
+            signed_raids = []
+            reports = [report for report in attendance if raid_name in report['raids']]
+            for report in reports:
+                start = report['start']
+                if not start in participants[name][raid_name]['raids']:
+                    if start > participants[name][raid_name]['first_raid']:
+                        if (schedule.has_signed_off(name, start)): signed_raids.append(start)
+                        else: missed_raids.append(start)
+            participants[name][raid_name]['missed_raids'] = missed_raids
+            participants[name][raid_name]['signed_raids'] = signed_raids
+
+    result = {}
 
     for name in participants:
-        participants[name]['attendance'] = len(participants[name]['raids']) / (len(participants[name]['raids']) + len(participants[name]['missed_raids']))
+        total_attended = 0
+        total_missed = 0
+        total_signed = 0
 
-    return participants
+        for raid in participants[name]:
+            raid_info = participants[name][raid]
 
+            total_attended += len(raid_info['raids'])
+            total_missed += len(raid_info['missed_raids'])
+            total_signed += len(raid_info['signed_raids'])
 
-def get_participant(name, guild = 'Hive Mind', update_attendance=True, days = None, months = None):
-    attendance = get_attendance(guild, update_attendance, days, months)
-    participant = {'raids': [], 'missed_raids': []}
+            try: raid_info['attendance'] = len(raid_info['raids']) / (len(raid_info['raids']) + len(raid_info['missed_raids']) + len(raid_info['signed_raids']))
+            except ZeroDivisionError: raid_info['attendance'] = -1
 
-    participant['raids'] = [raid['start'] for raid in attendance if name in raid['participants']]
+            try: raid_info['sign_rate'] = len(raid_info['signed_raids']) / (len(raid_info['signed_raids']))
+            except ZeroDivisionError: raid_info['sign_rate'] = 1
+        
+        try: att = total_attended / (total_attended + total_missed + total_signed)
+        except ZeroDivisionError: att = -1
 
-    if (len(participant['raids']) > 0):
-        participant['first_raid'] = min(participant['raids'])
+        try: sr = total_signed / (total_missed + total_signed)
+        except ZeroDivisionError: sr = 1
 
-        possible_raids = [raid['start'] for raid in attendance if raid['start'] > participant['first_raid']]
-        participant['missed_raids'] = [raid for raid in possible_raids if raid not in participant['raids']]
-        participant['attendance'] = len(participant['raids']) / (len(participant['raids']) + len(participant['missed_raids']))
-    
-    else: 
-        participant['first_raid'] = time_now() * 1000
-        participant['attendance'] = 0
+        result[name] = {'attendance': att, 'sign_rate': sr, 'raids': participants[name]}
 
-    return participant
+    return result
+
+def get_participant(name, update_attendance=True, days = None, months = None):
+    name = name.strip().lower()
+    participants = get_participants(update_attendance, days, months)
+    if name in participants: return participants[name]
+    return {'attendance': 0, 'sign_rate': 0, 'raids': {}}
 
 def make_attendance_plot(participants, figurename):
     attendances = []
@@ -170,19 +196,28 @@ def get_message_brief(categories):
             message += '__**{}:**__\n'.format(category['title'])
 
         for name, player_attendance in category['attendance']:
+            if raiders.getRaiderAttribute(name, 'team') == 'team red': message += ':red_circle:'
+            if raiders.getRaiderAttribute(name, 'team') == 'team blue': message += ':blue_circle:'
+
             if category['type'] is 'player':
                 message += '__**{}**__ - '.format(name.capitalize())
             else:
                 message += '**{}** - '.format(name.capitalize())
-            attended_raids = len(player_attendance['raids'])
+
+            raids = player_attendance['raids']
+
+            attended_raids = sum([len(raids[raid]['raids']) for raid in raids.keys()])
 
             if (attended_raids == 0):
                 message += 'no raids registered.\n'
             else:
                 attendance = round(player_attendance['attendance'] * 100)
-                missed_raids = len(player_attendance['missed_raids'])
-                message += 'attendance: **{}%**, attended raids: **{}**, missed raids: **{}**\n'.format(attendance, attended_raids, missed_raids)
-        
+
+                missed_raids = sum([len(raids[raid]['missed_raids']) for raid in raids.keys()])
+                signed_raids = sum([len(raids[raid]['signed_raids']) for raid in raids.keys()])
+
+                message += 'attendance: **{}%**, attended raids: **{}**, signed off: **{}**, didn\'t sign off: **{}**\n'.format(attendance, attended_raids, signed_raids, missed_raids)
+
         if category['type'] is 'class':
             message += '\n'
 
@@ -202,17 +237,13 @@ def get_message_verbose(categories):
     return message
 
 class Attendance(Cog):
-    def __init__(self, bot, error_messages_lifetime):
-        self.bot = bot
-        self.error_messages_lifetime = error_messages_lifetime
-
     @command(name='attendance', help='Reports the attendance for the raider(s) or class(es). Example:\'!attendance Matitka warriors Mage swiftshot\'')
     @has_any_role('Officer', 'Admin')
     async def cmd_attendance(self, ctx, *args):
         logger.log_command(ctx, args)
         await ctx.message.delete()
         args = list(args)
-        _ = defs.get_options(args)
+        options, args = defs.get_options(args)
 
         days = None
         months = None
@@ -241,14 +272,17 @@ class Attendance(Cog):
                 await ctx.send('Argument \'{}\' not understood. Please use \'!help {}\' for help on how to use this command.'.format(args[-1], ctx.command.name), delete_after=self.error_messages_lifetime)
                 return
         
+        team = ''
+        if ('-r' in options): team = 'team red'
+        if ('-b' in options): team = 'team blue'
+
         categories = []
         for arg in args:
-            print(arg)
             if (arg.lower()[-1] is 's') and (arg.lower()[:-1] in defs.classes): 
                 arg = arg.lower()[:-1]
             if arg.lower() in defs.classes:
                 class_raiders = raiders.all_with_attribute('class', arg.lower())
-                class_names = [raider for raider in class_raiders]
+                class_names = [raider for raider in class_raiders if raiders.getRaiderAttribute(raider, 'team') == team or team == '']
                 category = {'type': 'class', 'title': arg.capitalize() + 's', 'attendance': class_names}
             else:
                 category = {'type': 'player', 'attendance': [arg]}
@@ -334,3 +368,46 @@ class Attendance(Cog):
 
         message = "Missing raiders for the {}: {}".format(query_date.strftime('%d/%m'), ', '.join(names))
         await ctx.send(message)
+
+    @tasks.loop(minutes=15)
+    async def update_attendance_task(self):
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        creds = ServiceAccountCredentials.from_json_keyfile_name(defs.dir_path + '/client_secret.json', scope)
+        client = gspread.authorize(creds)
+        sheet = client.open("Hive Mind Giga-Sheet").worksheet('Assessment Sheet')
+
+        participants = get_participants()
+
+        to_update = []
+        col = raiders.get_col('attendance')
+
+        for name in participants:
+            attendance = round(participants[name]['attendance'] * 100)
+            sheet_attendance = raiders.getRaiderAttribute(name, 'attendance')
+            try: sheet_attendance = float(sheet_attendance.replace('%', ''))
+            except ValueError: sheet_attendance = None
+            if attendance != sheet_attendance:
+                row = raiders.getRaiderAttribute(name, 'row')
+                val = float(attendance) / 100
+                to_update.append({'row': row, 'val': val})
+        
+        if len(to_update) > 0:
+            min_row = min([u['row'] for u in to_update])
+            max_row = max([u['row'] for u in to_update])
+            first = gspread.utils.rowcol_to_a1(min_row, col)
+            last = gspread.utils.rowcol_to_a1(max_row, col)
+
+            cells = sheet.range('{}:{}'.format(first, last))
+
+            for update in to_update:
+                row = update['row'] - min_row 
+                cells[row].value = update['val']
+            
+            sheet.update_cells(cells)
+        
+        logger.log_event('attendance_update', 'update_attendance task finished with {} updates.'.format(len(to_update)))
+
+    def __init__(self, bot, error_messages_lifetime):
+        self.bot = bot
+        self.error_messages_lifetime = error_messages_lifetime
+        self.update_attendance_task.start()

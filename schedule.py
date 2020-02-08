@@ -57,6 +57,11 @@ def get_date_from_string(date_str):
         date.replace(year=year + 1)
     return date
 
+def has_signed_off(name, date):
+    if isinstance(date, int): date = datetime.fromtimestamp(date / 1000).date
+
+    return False
+
 class Schedule(Cog):
     def __init__(self, bot):
         self.bot = bot

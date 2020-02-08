@@ -7,16 +7,18 @@ from discord.ext.commands import Cog
 
 log_file = file_handling.JSONFile(
     filename='log.json', 
-    #location=os.getenv('TEMPUBOT_LOG_PATH', defs.dir_path),
     encoding='utf-16-le'
 )
+
+def set_info(pid, process_name):
+    log_file.set('pid', str(pid))
+    log_file.set('process_name', process_name)
 
 def append_entry(entry):
     print(defs.timestamp(), list(entry.values()))
     log = log_file.get('log')
     log.append(entry)
     log_file.set('log', log)
-
 
 def log_message(message):
     append_entry({
@@ -62,12 +64,12 @@ class Logger(Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    # @Cog.listener()
-    # async def on_error(self, event, *args, **kwargs):
-    #     log_error(event, 'args: {}, kwargs: {}'.format(args, kwargs))
+    @Cog.listener()
+    async def on_error(self, event, *args, **kwargs):
+        log_error(event, 'args: {}, kwargs: {}'.format(args, kwargs))
 
-    # @Cog.listener()
-    # async def on_command_error(self, ctx, exc):
-    #     message = '{} ({}): \'{}\'. {}'.format(ctx.author, ctx.message.channel, ctx.message.content, exc)
-    #     log_error('command_error', message)
+    @Cog.listener()
+    async def on_command_error(self, ctx, exc):
+        message = '{} ({}): \'{}\'. {}'.format(ctx.author, ctx.message.channel, ctx.message.content, exc)
+        log_error('command_error', message)
 
