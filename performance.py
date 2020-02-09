@@ -40,10 +40,10 @@ def get_fight_summary(fight, metrics, report_info):
         driver = webdriver.Chrome(options=chrome_options)
         driver.get(url_dps)
 
-        element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "primary")))
+        element = WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.CLASS_NAME, "primary")))
         fight['deaths'] = element.text
 
-        element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "player-table")))
+        element = WebDriverWait(driver, 60).until(EC.presence_of_element_located((By.CLASS_NAME, "player-table")))
         row_elements = element.find_elements_by_tag_name('tr')[1:]
 
         for row_element in row_elements:
