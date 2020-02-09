@@ -71,7 +71,7 @@ def get_fight_summary(fight, metrics, report_info):
 def get_new_parses(metrics, new_parses):
     report_info = getReportsGuild('Hive Mind')[0]
 
-    past_start = performance_file.get('start', '')
+    past_start = performance_file.get('start', 0)
     bosses = performance_file.get('bosses', [])
 
     if (report_info['start'] < past_start): return
