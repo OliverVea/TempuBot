@@ -109,7 +109,7 @@ def update_raiders():
     logger.log_event('raider_update', message)
 
 def get_col(col_name):
-    category_col = raiders_file.get('category_col', {})
+    category_col = raiders_file.get('category_col', on_error={})
     if col_name in category_col: return category_col[col_name]
     return None
 

@@ -10,13 +10,16 @@ log_file = file_handling.JSONFile(
     encoding='utf-16-le'
 )
 
-def set_info(pid, process_name):
+def set_info(hostname, local_ip, external_ip, pid, process_name):
+    log_file.set('hostname', hostname)
+    log_file.set('local_ip', local_ip)
+    log_file.set('external_ip', external_ip)
     log_file.set('pid', str(pid))
     log_file.set('process_name', process_name)
 
 def append_entry(entry):
     print(defs.timestamp(), list(entry.values()))
-    log = log_file.get('log')
+    log = log_file.get('log', on_error=[])
     log.append(entry)
     log_file.set('log', log)
 
@@ -64,12 +67,12 @@ class Logger(Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    @Cog.listener()
-    async def on_error(self, event, *args, **kwargs):
-        log_error(event, 'args: {}, kwargs: {}'.format(args, kwargs))
+    # @Cog.listener()
+    # async def on_error(self, event, *args, **kwargs):
+    #     log_error(event, 'args: {}, kwargs: {}'.format(args, kwargs))
 
-    @Cog.listener()
-    async def on_command_error(self, ctx, exc):
-        message = '{} ({}): \'{}\'. {}'.format(ctx.author, ctx.message.channel, ctx.message.content, exc)
-        log_error('command_error', message)
+    # @Cog.listener()
+    # async def on_command_error(self, ctx, exc):
+    #     message = '{} ({}): \'{}\'. {}'.format(ctx.author, ctx.message.channel, ctx.message.content, exc)
+    #     log_error('command_error', message)
 

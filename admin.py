@@ -12,6 +12,12 @@ admin_file = JSONFile('admin.json')
 
 admin_file.get('welcome_message', on_error='')
 
+def get_tempia(bot):
+    members = list(bot.get_all_members())
+    for member in members:
+        if member.id == 150318701323878401: #Tempia's Discord ID
+            return member
+
 def get_role(rolename, roles):
     for role in roles:
         if role.name == rolename:
@@ -53,7 +59,7 @@ class Admin(Cog):
 
     @Cog.listener()
     async def on_member_join(self, member):
-        await member.send(admin_file.get('welcome_message'))
+        await member.send(admin_file.get('welcome_message', on_error=''))
         print(defs.timestamp(), member, 'joined server.')
         
     @Cog.listener()
@@ -108,10 +114,14 @@ class Admin(Cog):
         logger.log_command(ctx, args)
         with suppress():
             await ctx.message.delete()
-            channel_id = admin_file.get('announcement_channel_id')
-            channel = self.bot.get_channel(channel_id)
-            message = ctx.message.content[len(ctx.command.name) + 2:] + '\n'
-            message += admin_file.get('announcement_end', on_error='')
+            channel_id = admin_file.get('announcement_channel_id', on_error=-1)
+            if channel_id is -1:
+                channel = ctx
+                message = 'Announcement channel not set.'
+            else:
+                channel = self.bot.get_channel(channel_id)
+                message = ctx.message.content[len(ctx.command.name) + 2:] + '\n'
+                message += admin_file.get('announcement_end', on_error='')
             await channel.send(message)
 
     @command(name='welcome', help='Displays the welcome message.')
@@ -119,7 +129,7 @@ class Admin(Cog):
     async def welcome(self, ctx, *args):
         logger.log_command(ctx, args)
         with suppress(): await ctx.message.delete()
-        await ctx.send(admin_file.get('welcome_message'))
+        await ctx.send(admin_file.get('welcome_message', on_error=''))
 
     @command(name='setwelcome', help='Sets the welcome message.')
     @has_permissions(administrator=True)
@@ -130,7 +140,7 @@ class Admin(Cog):
         message = ctx.message.content[len(ctx.command.name) + 2:]
         
         admin_file.set('welcome_message', message)
-        await ctx.send('Welcome message set to \'{}\'.'.format(admin_file.get('welcome_message')))
+        await ctx.send('Welcome message set to \'{}\'.'.format(admin_file.get('welcome_message', on_error='')))
 
     @command(name='clear', help='Clears X messages, where X is the argument. Example: \'!clear 50\'')
     @has_permissions(administrator=True)

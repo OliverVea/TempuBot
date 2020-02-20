@@ -6,15 +6,16 @@ from discord.ext.commands import Cog, command, has_permissions, has_any_role, dm
 import defs
 import raiders
 import logger
+import admin
 
 from file_handling import JSONFile
 
-schedule_file = JSONFile('schedule.json', on_error={})
+schedule_file = JSONFile('schedule.json')
 
 def addDate(channelid, dayStart, dayEnd, timeStart, timeEnd):
     days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-    dayStart = days.index(dayStart) + 1
-    dayEnd = days.index(dayEnd) + 1
+    dayStart = days.index(dayStart.lower()) + 1
+    dayEnd = days.index(dayEnd.lower()) + 1
     if (dayEnd < dayStart): dayEnd += 7
 
     hourStart, minuteStart = map(int, timeStart.split('.'))
@@ -24,7 +25,7 @@ def addDate(channelid, dayStart, dayEnd, timeStart, timeEnd):
     endDate = datetime(year=1, month=1, day=dayEnd, hour=hourEnd, minute=minuteEnd)
 
     entry = {'id': channelid, 'start': startDate.strftime('%d-%H:%M:%S'), 'end': endDate.strftime('%d-%H:%M:%S')}
-    dates = schedule_file.get('dates')
+    dates = schedule_file.get('dates', on_error=[])
     dates.append(entry)
     schedule_file.set('dates', dates)
 
@@ -49,7 +50,7 @@ def get_date_from_string(date_str):
         if delim in date_str:
             assigned = True
             dates = date_str.split(delim)
-    if not assigned or len(dates) > 2:
+    if not assigned or len(dates) > 3:
         raise TypeError(date_str)
     year = datetime.now().year
     date = datetime(year, int(dates[1]), int(dates[0]))
@@ -74,7 +75,7 @@ class Schedule(Cog):
             await ctx.send('Too few arguments. Use \'!help {}\' for info on how to use this function.'.format(ctx.command.name))
             return
         
-        name = args[0].lower()
+        name = args[0].lower().replace(',', '')
 
         raider_names = raiders.getRaiderNames()
         for raider_name in raider_names:
@@ -89,7 +90,7 @@ class Schedule(Cog):
 
         signoff = {'name': name, 'reason': reason}
 
-        dates_str = args[1].split('-')
+        dates_str = args[1].replace(',', '').split('-')
 
         if len(dates_str) == 1:
             date = get_date_from_string(dates_str[0])
@@ -135,14 +136,18 @@ class Schedule(Cog):
             message = '{} signed off from the {} of {} to the {} of {}.'.format(name.capitalize(), ordinal(start.day), start.strftime('%B'), ordinal(end.day), end.strftime('%B'))
             if (reason != ''): message += ' Reason: "{}"'.format(reason)
 
-        signoffs = schedule_file.get('signoffs')
+        signoffs = schedule_file.get('signoffs', on_error=[])
         signoffs.append(signoff)
         schedule_file.set('signoffs', signoffs)
 
         await ctx.send(message)
-        channel_id = schedule_file.get('signoffs_channel')
-        channel = self.bot.get_channel(channel_id)
-        await channel.send(message)  
+        channel_id = schedule_file.get('signoffs_channel', on_error=-1)
+        if channel_id is -1:
+            tempia = admin.get_tempia(self.bot)
+            await tempia.send('Signoff channel not set. {} tried to sign off.'.format(name.capitalize()))
+        else:
+            channel = self.bot.get_channel(channel_id)
+            await channel.send(message)  
 
     @command(name='setsignoffschannel', help='Sets the signoff channel to the message this command is sent in.')
     @has_permissions(administrator=True)
@@ -172,7 +177,7 @@ class Schedule(Cog):
         epoch = datetime(1970, 1, 1)
         timestamp = int((query_date - epoch).total_seconds() * 1000)
 
-        signoffs = schedule_file.get('signoffs')
+        signoffs = schedule_file.get('signoffs', on_error=[])
 
         names = [so['name'].lower().capitalize() for so in signoffs if so['start'] <= timestamp <= so['end']]
         
@@ -219,7 +224,7 @@ class Schedule(Cog):
 
         if len(args) == 1:
             i = int(args[0])
-            dates = schedule_file.get('dates')
+            dates = schedule_file.get('dates', on_error=[])
             del dates[i]
             schedule_file.set('dates', dates)
         else:
@@ -233,7 +238,7 @@ class Schedule(Cog):
         except: pass
 
         if len(args) == 0:
-            dates = schedule_file.get('dates')
+            dates = schedule_file.get('dates', on_error=[])
             message = "**Raid Times:**\n"
             for i, entry in enumerate(dates):
                 message += '{} - id: {}, start: {}, end: {}\n'.format(i, entry['id'], entry['start'], entry['end'])

@@ -23,7 +23,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-performance_file = JSONFile('performance.json', on_error={})
+performance_file = JSONFile('performance.json')
 
 loop = asyncio.get_event_loop()
 
@@ -202,7 +202,7 @@ class Performance(Cog):
 
     @tasks.loop(seconds=20)
     async def wclRaidTask(self):
-        dates = schedule.schedule_file.get('dates')
+        dates = schedule.schedule_file.get('dates', on_error=[])
         for entry in dates:
             is_now = schedule.isNow(entry['start'], entry['end'])
 

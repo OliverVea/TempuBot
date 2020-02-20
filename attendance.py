@@ -53,12 +53,14 @@ def get_attendance(update_attendance = True, days = None, months = None):
         for report_info in reports:
             report_info['exclude'] = report_info['title'].startswith('_')
 
-            if '[MC]' in report_info['title']: report_info.setdefault('raids', []).append('MC')
-            if '[BWL]' in report_info['title']: report_info.setdefault('raids', []).append('BWL')
-            if '[ONY]' in report_info['title']: report_info.setdefault('raids', []).append('ONY')
+            report_info['title'] = report_info['title'].lower()
 
-            if '[R]' in report_info['title']: report_info['team'] = 'team red'
-            elif '[B]' in report_info['title']: report_info['team'] = 'team blue'
+            if '[mc]' in report_info['title']: report_info.setdefault('raids', []).append('MC')
+            if '[bwl]' in report_info['title']: report_info.setdefault('raids', []).append('BWL')
+            if '[ony]' in report_info['title']: report_info.setdefault('raids', []).append('ONY')
+
+            if '[r]' in report_info['title']: report_info['team'] = 'team red'
+            elif '[b]' in report_info['title']: report_info['team'] = 'team blue'
             
             if not 'raids' in report_info or not 'team' in report_info: report_info['exclude'] = True
         
@@ -303,6 +305,10 @@ class Attendance(Cog):
         await ctx.message.delete()
         _ = defs.get_options(args)
 
+        # TODO
+        await ctx.send('Attendanceplot has been deactivated for the time being. If you want it back, go pester Tempia.')
+        return
+
         days = None
         months = None
 
@@ -347,16 +353,18 @@ class Attendance(Cog):
         noshows = []
 
         for participant in participants:
-            missed_raids = participants[participant]['missed_raids']
+            missed_raids = []
+            for raid in participants[participant]['raids'].values():
+                missed_raids.extend(raid['missed_raids'])
             missed_dates = [date.fromtimestamp(raid / 1000) for raid in missed_raids]
             if query_date.date() in missed_dates:
-                noshows.append(participant)
+                noshows.append(participant.lower().capitalize())
         
         if len(noshows) is 0:
             await ctx.send('All raiders attended on the {}.'.format(query_date.strftime('%d/%m')))
             return
 
-        for signoff in schedule.schedule_file.get('signoffs'):
+        for signoff in schedule.schedule_file.get('signoffs', on_error=[]):
             if signoff['start'] <= timestamp <= signoff['end'] and signoff['name'].lower().capitalize() in noshows:
                 noshows.remove(signoff['name'].lower().capitalize())
 
