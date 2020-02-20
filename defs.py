@@ -49,6 +49,12 @@ classes = [
     'warrior'
 ]
 
+def get_tempia(bot):
+    members = list(bot.get_all_members())
+    for member in members:
+        if member.id == 150318701323878401: #Tempia's Discord ID
+            return member
+
 def getParseColor(parse):
     if (parse == 100): return '#e5cc80'
     elif (parse == 99): return '#e268a8'

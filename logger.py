@@ -67,12 +67,17 @@ class Logger(Cog):
     def __init__(self, bot):
         self.bot = bot
     
-    # @Cog.listener()
-    # async def on_error(self, event, *args, **kwargs):
-    #     log_error(event, 'args: {}, kwargs: {}'.format(args, kwargs))
+    @Cog.listener()
+    async def on_error(self, event, *args, **kwargs):
+        message = 'args: {}, kwargs: {}'.format(args, kwargs)
+        log_error(event, message)
+        tempia = defs.get_tempia(self.bot)
+        await tempia.send('Error: ' + message)
 
-    # @Cog.listener()
-    # async def on_command_error(self, ctx, exc):
-    #     message = '{} ({}): \'{}\'. {}'.format(ctx.author, ctx.message.channel, ctx.message.content, exc)
-    #     log_error('command_error', message)
+    @Cog.listener()
+    async def on_command_error(self, ctx, exc):
+        message = '{} ({}): \'{}\'. {}'.format(ctx.author, ctx.message.channel, ctx.message.content, exc)
+        log_error('command_error', message)
+        tempia = defs.get_tempia(self.bot)
+        await tempia.send('Error: ' + message)
 

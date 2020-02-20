@@ -143,7 +143,7 @@ class Schedule(Cog):
         await ctx.send(message)
         channel_id = schedule_file.get('signoffs_channel', on_error=-1)
         if channel_id is -1:
-            tempia = admin.get_tempia(self.bot)
+            tempia = defs.get_tempia(self.bot)
             await tempia.send('Signoff channel not set. {} tried to sign off.'.format(name.capitalize()))
         else:
             channel = self.bot.get_channel(channel_id)

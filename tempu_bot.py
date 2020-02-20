@@ -41,7 +41,7 @@ client = Bot('!')
 
 @client.event
 async def on_ready():
-    tempia = admin.get_tempia(client)
+    tempia = defs.get_tempia(client)
     message = 'Bot rebooted.\n **Process Name**: {}\n **PID**: {}\n **Hostname**: {}\n **Local IP**: {}\n **External IP**: {}'.format(process_name, str(pid), host_name, host_ip, ext_ip)
     await tempia.send(message)
     print(defs.timestamp(), 'connected')

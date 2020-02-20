@@ -12,12 +12,6 @@ admin_file = JSONFile('admin.json')
 
 admin_file.get('welcome_message', on_error='')
 
-def get_tempia(bot):
-    members = list(bot.get_all_members())
-    for member in members:
-        if member.id == 150318701323878401: #Tempia's Discord ID
-            return member
-
 def get_role(rolename, roles):
     for role in roles:
         if role.name == rolename:
