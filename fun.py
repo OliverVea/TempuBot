@@ -10,9 +10,6 @@ class Fun(Cog):
         self.bot = bot
         self.client = None
 
-        if not discord.opus.is_loaded():
-            discord.opus.load_opus('libopus.so')
-
     @command()
     @has_any_role('Officer', 'Admin')
     async def join(self, ctx):
