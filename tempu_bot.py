@@ -48,10 +48,6 @@ async def on_ready():
 
 import logger
 import admin
-import raiders
-import attendance
-import schedule
-import performance
 import fun
 
 logger.set_info(hostname=host_name, local_ip=host_ip, external_ip=ext_ip, pid=pid, process_name=process_name)
@@ -59,10 +55,6 @@ logger.log_event('reboot', 'Rebooted with pid {} and public ip {}.'.format(str(p
 
 client.add_cog(logger.Logger(client))
 client.add_cog(admin.Admin(client))
-client.add_cog(raiders.Raiders(client))
-client.add_cog(attendance.Attendance(client, error_messages_lifetime=10))
-client.add_cog(schedule.Schedule(client))
-client.add_cog(performance.Performance(client))
 client.add_cog(fun.Fun(client))
 
 with open(defs.dir_path + '/discord_token.txt') as f:
