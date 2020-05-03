@@ -8,6 +8,7 @@ from discord.ext.commands import Cog, command, has_any_role
 class Fun(Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.client = None
 
     @command()
     @has_any_role('Officer', 'Admin')
@@ -18,18 +19,18 @@ class Fun(Cog):
         channel = user.voice.channel
 
         if channel != None:
-            if self.bot == None or not self.bot.is_connected(): 
-                self.bot = await channel.connect()
+            if self.client == None or not self.client.is_connected(): 
+                self.client = await channel.connect()
             else:
-                await self.bot.move_to(channel)
+                await self.client.move_to(channel)
 
     @command()
     @has_any_role('Officer', 'Admin')
     async def leave(self, ctx):
         await ctx.message.delete()
 
-        if self.bot.is_connected():
-            await self.bot.disconnect()
+        if self.client.is_connected():
+            await self.client.disconnect()
 
     @command()
     @has_any_role('Officer', 'Admin')
@@ -41,11 +42,11 @@ class Fun(Cog):
         user = ctx.message.author
         channel = user.voice.channel
         
-        if self.bot.channel != channel:
+        if self.client.channel != channel:
             return
 
         for filename in os.listdir(defs.dir_path + '/soundboard_files'):
             if filename[:-4] == clipname:
-                self.bot.stop()
+                self.client.stop()
                 audiosource = discord.FFmpegPCMAudio(defs.dir_path + '/soundboard_files/' + filename)
-                self.bot.play(audiosource)
+                self.client.play(audiosource)
