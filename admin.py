@@ -289,3 +289,8 @@ class Admin(Cog):
         guild = self.bot.get_guild(payload.guild_id)
 
         await reaction_change(payload, guild, False)
+    
+    @Cog.listener()
+    async def on_member_update(self, before, after):
+        if after.id == defs.get_tempia(self.bot).id and after.nick != 'Tempia':
+            await after.edit(nick=None)
