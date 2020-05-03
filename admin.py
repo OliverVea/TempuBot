@@ -294,3 +294,6 @@ class Admin(Cog):
     async def on_member_update(self, before, after):
         if after.id == defs.get_tempia(self.bot).id and after.nick != 'Tempia':
             await after.edit(nick=None)
+        
+        if after.id == 652701117188145162 and after.nick != 'Poopooga':
+            await after.edit(nick='Poopooga')
