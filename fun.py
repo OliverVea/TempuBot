@@ -67,15 +67,11 @@ class Fun(Cog):
         verb = choice(words['verbs'])['word']
         if verb.endswith('e'):
             verb = verb[:-1]
-        elif verb.endswith('t'):
-            verb = verb + 't'
-        elif verb.endswith('g'):
-            verb = verb + 'g'
-        elif verb.endswith('n'):
-            verb = verb + 'n'
+        elif verb[-1] in ['t', 'g', 'n', 'p', 'm']:
+            verb = verb + verb[-1]
 
         noun = choice(words['nouns'])['word']
 
-        s = '{}ing {}s takes less skill than classic.'.format(verb, noun).capitalize()
+        s = '{}ing {}s takes more skill than classic.'.format(verb, noun).capitalize()
 
         await ctx.send(s)
