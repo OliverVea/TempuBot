@@ -1,6 +1,12 @@
 import discord
 import os
 
+import json
+
+from random import choice
+
+from random_word import RandomWords
+
 import defs
 
 from discord.ext.commands import Cog, command, has_any_role
@@ -50,3 +56,20 @@ class Fun(Cog):
                 self.client.stop()
                 audiosource = discord.FFmpegPCMAudio(defs.dir_path + '/soundboard_files/' + filename)
                 self.client.play(audiosource)
+    
+    @command()
+    async def classic(self, ctx, *args):
+        await ctx.message.delete()
+
+        with open('words.json') as f:
+            words = json.load(f)
+
+        verb = choice(words['verbs'])['word']
+        if verb.endswith('e'):
+            verb = verb[:-1]
+
+        noun = choice(words['nouns'])['word']
+
+        s = '{}ing {}s takes less skill than classic.'.format(verb, noun).capitalize()
+
+        await ctx.send(s)
