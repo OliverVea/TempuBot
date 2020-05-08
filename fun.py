@@ -67,6 +67,12 @@ class Fun(Cog):
         verb = choice(words['verbs'])['word']
         if verb.endswith('e'):
             verb = verb[:-1]
+        elif verb.endswith('t'):
+            verb = verb + 't'
+        elif verb.endswith('g'):
+            verb = verb + 'g'
+        elif verb.endswith('n'):
+            verb = verb + 'n'
 
         noun = choice(words['nouns'])['word']
 
