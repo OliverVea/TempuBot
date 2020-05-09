@@ -5,11 +5,16 @@ import json
 
 from random import choice
 
-from random_word import RandomWords
-
 import defs
 
 from discord.ext.commands import Cog, command, has_any_role
+
+from pattern.text import conjugate, pluralize
+try: conjugate('do')
+except: pass
+
+try: pluralize('i')
+except: pass
 
 class Fun(Cog):
     def __init__(self, bot):
@@ -65,13 +70,12 @@ class Fun(Cog):
             words = json.load(f)
 
         verb = choice(words['verbs'])['word']
-        if verb.endswith('e'):
-            verb = verb[:-1]
-        elif verb[-1] in ['t', 'g', 'n', 'p', 'm']:
-            verb = verb + verb[-1]
+        verb = conjugate(verb, aspect='progressive')
 
         noun = choice(words['nouns'])['word']
+        if choice([True, False]):
+            noun = pluralize(noun)
 
-        s = '{}ing {}s takes more skill than classic.'.format(verb, noun).capitalize()
+        s = '{} {} takes more skill than classic.'.format(verb, noun).capitalize()
 
         await ctx.send(s)
