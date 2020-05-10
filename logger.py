@@ -10,12 +10,11 @@ log_file = file_handling.JSONFile(
     encoding='utf-16-le'
 )
 
-def set_info(hostname, local_ip, external_ip, pid, process_name):
+def set_info(hostname, local_ip, external_ip, pid):
     log_file.set('hostname', hostname)
     log_file.set('local_ip', local_ip)
     log_file.set('external_ip', external_ip)
     log_file.set('pid', str(pid))
-    log_file.set('process_name', process_name)
 
 def append_entry(entry):
     print(defs.timestamp(), list(entry.values()))
