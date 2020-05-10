@@ -2,7 +2,6 @@ import defs
 print(defs.timestamp(), 'dir_path: ' + defs.dir_path)
 
 import os
-import psutil
 import asyncio
 import socket
 from urllib.request import urlopen, Request
@@ -30,8 +29,6 @@ except: print(defs.timestamp(), 'Local network information could not be found.')
 try:
     pid = os.getpid()
     print(defs.timestamp(), 'os pid:', pid)
-    process_name = psutil.Process(pid).name()
-    print(defs.timestamp(), 'process name:', process_name)
 except AttributeError: print(defs.timestamp(), 'pid could not be identified.')
 try: print(defs.timestamp(), 'os info:', os.uname())
 except AttributeError: print(defs.timestamp(), 'system status could not be found.')
@@ -42,7 +39,7 @@ client = Bot('!')
 @client.event
 async def on_ready():
     tempia = defs.get_tempia(client)
-    message = 'Bot rebooted.\n **Process Name**: {}\n **PID**: {}\n **Hostname**: {}\n **Local IP**: {}\n **External IP**: {}'.format(process_name, str(pid), host_name, host_ip, ext_ip)
+    message = 'Bot rebooted.\n **PID**: {}\n **Hostname**: {}\n **Local IP**: {}\n **External IP**: {}'.format(str(pid), host_name, host_ip, ext_ip)
     await tempia.send(message)
     print(defs.timestamp(), 'connected')
 
@@ -50,7 +47,7 @@ import logger
 import admin
 import fun
 
-logger.set_info(hostname=host_name, local_ip=host_ip, external_ip=ext_ip, pid=pid, process_name=process_name)
+logger.set_info(hostname=host_name, local_ip=host_ip, external_ip=ext_ip, pid=pid)
 logger.log_event('reboot', 'Rebooted with pid {} and public ip {}.'.format(str(pid), ext_ip))
 
 client.add_cog(logger.Logger(client))
