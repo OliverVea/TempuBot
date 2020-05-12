@@ -4,6 +4,7 @@ import discord
 import re
 from contextlib import suppress
 import time
+import json
 
 from utility import get_users
 
@@ -286,6 +287,37 @@ class Admin(Cog):
         })
 
         admin_file.set('reactions', reactions)
+
+    @command()
+    @has_permissions(administrator=True)
+    async def export(self, ctx, *args):
+        await ctx.message.delete()
+
+        print(ctx.message)
+
+        messages = []
+        user_id = int(args[0])
+        print(user_id)
+
+        for guild in self.bot.guilds:
+            print(guild.name)
+            for channel in guild.text_channels:
+                print(channel.name)
+                try:
+                    async for message in channel.history(limit=None):
+                        if message.author.id == user_id:
+                            messages.append(message)
+                except:
+                    print('not enough permissions.')
+        
+        await ctx.send(len(messages))
+
+        obj = {}
+        for message in messages:
+            obj.setdefault(str(message.channel), []).append(message.content)
+        
+        with open('{}.json'.format(user_id), 'w') as f:
+            json.dump(obj, f, indent=4)
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload):
