@@ -57,5 +57,4 @@ client.add_cog(fun.Fun(client))
 with open(defs.dir_path + '/discord_token.txt') as f:
     discord_token = f.readline().strip()
 print(defs.timestamp(), 'starting discord bot with token:', discord_token)
-
 client.run(discord_token)   

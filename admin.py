@@ -3,6 +3,9 @@ from random import choice
 import discord
 import re
 from contextlib import suppress
+import time
+
+from utility import get_users
 
 import defs
 import logger
@@ -44,7 +47,6 @@ async def reaction_change(payload, guild, status):
             else: 
                 await member.remove_roles(role)
                 logger.log_event('removerole', 'removed role {} from user {}.'.format(role, member))
-            
 
 class Admin(Cog):
     def __init__(self, bot):
@@ -228,6 +230,15 @@ class Admin(Cog):
         if len(reactions[channel_id]) is 0:
             del reactions[channel_id]
         admin_file.set('reactions', reactions)
+
+    @command()
+    @has_permissions(administrator=True)
+    async def suspend(self, ctx, *args):
+        await ctx.message.delete()
+
+        members = await get_users(self.bot, user_string=args[0])
+
+        await ctx.send(str(members))
 
     @command(name='reactionassignment', help='Assigns a specific role to a user depending on the reaction. Template: \'!reactionassignment MESSAGE_ID EMOJI ROLE\'.')
     @has_permissions(administrator=True)
