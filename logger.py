@@ -75,6 +75,9 @@ class Logger(Cog):
 
     @Cog.listener()
     async def on_command_error(self, ctx, exc):
+        #if exc in ['You are missing Administrator permission(s) to run this command.', 'You are missing at least one of the required roles: \'Officer\' or \'Admin\'']:
+        await ctx.send('kys')
+
         message = '{} ({}): \'{}\'. {}'.format(ctx.author, ctx.message.channel, ctx.message.content, exc)
         log_error('command_error', message)
         tempia = defs.get_tempia(self.bot)
