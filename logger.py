@@ -2,6 +2,8 @@ import defs
 import file_handling
 import os
 
+from random import choice
+
 from datetime import datetime
 from discord.ext.commands import Cog
 
@@ -76,7 +78,13 @@ class Logger(Cog):
     @Cog.listener()
     async def on_command_error(self, ctx, exc):
         #if exc in ['You are missing Administrator permission(s) to run this command.', 'You are missing at least one of the required roles: \'Officer\' or \'Admin\'']:
-        await ctx.send('kys')
+        responses = [
+            '{} kys'.format(ctx.author.mention),
+            'fuck off {}'.format(ctx.author.name.lower()),
+            'literally lootbanned.',
+            '{} has been removed from the guild by Peanut.'.format(ctx.author.name)
+        ]
+        await ctx.send(choice(responses))
 
         message = '{} ({}): \'{}\'. {}'.format(ctx.author, ctx.message.channel, ctx.message.content, exc)
         log_error('command_error', message)
