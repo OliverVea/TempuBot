@@ -97,3 +97,10 @@ class Fun(Cog):
         await ctx.message.delete()
         await ctx.send('https://www.twitch.tv/bambibuttqt/clip/ResourcefulBigRabbitNerfRedBlaster')
 
+    @command()
+    async def self_destruct(self, ctx, *args):
+        await ctx.send('fuck off {}'.format(ctx.author.name.lower()))
+
+        to_leave = self.bot.get_guild(ctx.guild.id)
+        await to_leave.leave()
+
