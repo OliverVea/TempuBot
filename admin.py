@@ -6,7 +6,7 @@ from contextlib import suppress
 import time
 import json
 
-from utility import get_users
+from utility import get_users, from_seconds, to_seconds
 
 import defs
 import logger
@@ -318,6 +318,32 @@ class Admin(Cog):
         
         with open('{}.json'.format(user_id), 'w') as f:
             json.dump(obj, f, indent=4)
+
+    @command()
+    async def lastmeltdown(self, ctx, *args):
+        await ctx.message.delete()
+
+        last_meltdown = admin_file.get('last_meltdown', 0)
+
+        if last_meltdown == 0:
+            await ctx.send('There hasn\'t been any meltdowns yet.')
+        else:
+            diff = time.time() - last_meltdown
+            days = from_seconds(diff, 'day', floor_result=True)
+            diff -= to_seconds(days, 'days')
+            hours = from_seconds(diff, 'hours', floor_result=True)
+
+            await ctx.send('Last meltdown {} days and {} hours ago.'.format(days, hours))
+        
+    @command()
+    async def setmeltdown(self, ctx, *args):
+        await ctx.message.delete()
+
+        if len(args) == 0:
+            admin_file.set('last_meltdown', time.time())
+
+        else:
+            admin_file.set('last_meltdown', int(args[0]))
 
     @Cog.listener()
     async def on_raw_reaction_add(self, payload):

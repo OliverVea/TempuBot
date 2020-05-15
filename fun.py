@@ -79,3 +79,21 @@ class Fun(Cog):
         s = '{} {} takes more skill than classic.'.format(verb, noun).capitalize()
 
         await ctx.send(s)
+    
+    @command()
+    async def kys(self, ctx, *args):
+        await ctx.message.delete()
+
+        responses = [
+            '{} kys'.format(ctx.author.mention),
+            'fuck off {}'.format(ctx.author.name.lower()),
+            'literally lootbanned.',
+            '{} has been removed from the guild by Peanut.'.format(ctx.author.name)]
+
+        await ctx.send(choice(responses))
+
+    @command()
+    async def clownfiesta(self, ctx, *args):
+        await ctx.message.delete()
+        await ctx.send('https://www.twitch.tv/bambibuttqt/clip/ResourcefulBigRabbitNerfRedBlaster')
+

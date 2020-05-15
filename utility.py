@@ -1,3 +1,5 @@
+from math import floor
+
 async def get_users(client, user_string=None, user_id=None, user_mention=None, guild=None, as_list=False):
     assert any([field != None for field in [user_string, user_id, user_mention]]), '\'user_name\', \'user_id\' or \'user_mention\' must be in query.'
 
@@ -33,20 +35,30 @@ def standardize_unit(unit):
         if unit in unit_dict[key]:
             return key
 
-async def from_seconds(value, unit):
+def from_seconds(value, unit, floor_result=False):
     unit = standardize_unit(unit)
     if unit == None:
         return
 
     conversion = {'ns': 1e-6, 'ms': 1e-3, 's': 1, 'm': 60, 'h': 60**2, 'd': 24 * 60**2, 'M': 30 * 24 * 60**2, 'y': 365 * 60**2}
 
-    return value / conversion
+    value /= conversion[unit]
 
-async def to_seconds(value, unit):
+    if floor_result:
+        value = floor(value)
+
+    return value
+
+def to_seconds(value, unit, floor_result=False):
     unit = standardize_unit(unit)
     if unit == None:
         return
 
     conversion = {'ns': 1e-6, 'ms': 1e-3, 's': 1, 'm': 60, 'h': 60**2, 'd': 24 * 60**2, 'M': 30 * 24 * 60**2, 'y': 365 * 60**2}
 
-    return value * conversion
+    value *= conversion[unit]
+
+    if floor_result:
+        value = floor(value)
+
+    return value
